@@ -14,6 +14,9 @@ typedef int (*IntMap)(int curr);
 typedef JsArray (*SortFunc)(IntComp funcptr);
 typedef int (*ReduceFunc)(IntReduce funcptr, int start);
 typedef JsArray (*MapFunc)(IntMap funcptr);
+typedef JsArray (*ConcatFunc)(JsArray other);
+typedef int (*AppendFunc)(int item);
+typedef void (*PrintFunc)(char *preamble);
 
 typedef enum {
 	FAILURE,
@@ -27,18 +30,10 @@ struct jsArrayWrapper {
 	SortFunc sort;		ffi_closure* sortClosure;	ffi_cif sortCif;
 	ReduceFunc reduce;	ffi_closure* reduceClosure;	ffi_cif reduceCif;
 	MapFunc map;		ffi_closure* mapClosure;	ffi_cif mapCif;
+	ConcatFunc concat;	ffi_closure* concatClosure; 	ffi_cif concatCif;
+	AppendFunc append;	ffi_closure* appendClosure;	ffi_cif appendCif;
+	PrintFunc print;	ffi_closure* printClosure;	ffi_cif printCif;
 };
 
 JsArray JsArrayNew();
- 
-void JsArrayAppend(JsArray jsArray, int num);
-
 void JsArrayFree(JsArray jsArray);
-
-void JsArrayPrint(char *preamble, JsArray jsArray);
-
-JsArray sortingFunc(JsArray self, IntComp funcptr);
-
-int reducingFunc(JsArray self, IntReduce funcptr, int start);
-
-JsArray mappingFunc(JsArray self, IntMap funcptr);

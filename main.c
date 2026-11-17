@@ -1,4 +1,5 @@
 #include "jsArrays.h"
+#include <limits.h>
 
 int readInt(void);
 
@@ -14,6 +15,16 @@ int toSquare(int curr);
 int oldmain(void);
 
 int main(void) {
+	return oldmain();
+}
+
+int readInt(void) {
+	int n;
+	scanf("%d", &n);
+	return n;
+}
+
+int newMain(void) {
 	int arrayLength;
 	printf("Enter array length: ");
 	scanf("%d", &arrayLength);
@@ -22,23 +33,17 @@ int main(void) {
 
 	printf("Enter %d integers: ", arrayLength);
 	for (int i = 0; i < arrayLength; i++) 
-		JsArrayAppend(jsArray, readInt());
+		jsArray->append(readInt());
 
 	printf("\n");
 
 	JsArray sortedMapped = jsArray->sort(isGreater)->map(toSquare);
-	JsArrayPrint("Sorted and squared array:", sortedMapped);
+	sortedMapped->print("Sorted and squared array:");
 
 	JsArrayFree(jsArray);
 	JsArrayFree(sortedMapped);
 	
 	return 0;
-}
-
-int readInt(void) {
-	int n;
-	scanf("%d", &n);
-	return n;
 }
 
 int oldmain(void) {
@@ -49,45 +54,43 @@ int oldmain(void) {
 	JsArray jsArray = JsArrayNew();
 
 	printf("Enter %d integers: ", arrayLength);
-	for (int i = 0; i < arrayLength; i++) {
-		int num;
-		scanf("%d", &num);
-		JsArrayAppend(jsArray, num);
-	}
+	for (int i = 0; i < arrayLength; i++)
+		jsArray->append(readInt());
+	
 	printf("\n");
 
 	printf("Array length: %d\n", jsArray->len);
 
-	JsArrayPrint("Items in unsorted array:", jsArray);
+	jsArray->print("Items in unsorted array:");
 
 	printf("\n");
 
 	JsArray threeTimes = jsArray->map(toTimesThree);
-	JsArrayPrint("Items in three times mapped array:", threeTimes);
+	threeTimes->print("Items in three times mapped array:");
 
 	JsArray square = jsArray->map(toSquare);
-	JsArrayPrint("Items in square mapped array:", square);
+	square->print("Items in square mapped array:");
 
 	printf("\n");
 
 	jsArray->sort(isGreater);
 
-	JsArrayPrint("Items in isGreater sorted array:", jsArray);
+	jsArray->print("Items in isGreater sorted array:");
 
 	jsArray->sort(isLesser);
 
-	JsArrayPrint("Items in isLesser sorted array:", jsArray);
+	jsArray->print("Items in isLesser sorted array:");
 
 	printf("\n");
 
 	threeTimes->sort(isGreater);
 
-	JsArrayPrint("Items in three times isGreater sorted array:", threeTimes);
+	threeTimes->print("Items in three times isGreater sorted array:");
 	JsArrayFree(threeTimes);
 
 	square->sort(isLesser);
 
-	JsArrayPrint("Items in square isLesser sorted array:", square);
+	square->print("Items in square isLesser sorted array:");
 	JsArrayFree(square);
 
 	printf("\n");
