@@ -15,6 +15,11 @@ typedef JsArray (*SortFunc)(IntComp funcptr);
 typedef int (*ReduceFunc)(IntReduce funcptr, int start);
 typedef JsArray (*MapFunc)(IntMap funcptr);
 
+typedef enum setupresult {
+	FAILURE,
+	SUCCESS
+} SetupResult;
+
 struct jsArrayWrapper {
 	int* array;
 	int len;
@@ -25,10 +30,10 @@ struct jsArrayWrapper {
 };
 
 JsArray JsArrayNew();
-static bool setupSort(JsArray self);
-static bool setupMap(JsArray self);
-static bool setupReduce(JsArray self);
-static bool setupFree(JsArray self);
+static SetupResult setupSort(JsArray self);
+static SetupResult setupMap(JsArray self);
+static SetupResult setupReduce(JsArray self);
+static SetupResult setupFree(JsArray self);
  
 void JsArrayAppend(JsArray jsArray, int num);
 static void resize(JsArray jsArray);

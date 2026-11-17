@@ -4,9 +4,6 @@ static ffi_type* sortArgTypes[] = { &ffi_type_pointer };
 static ffi_type* reduceArgTypes[] = { &ffi_type_pointer, &ffi_type_sint };
 static ffi_type* mapArgTypes[]    = { &ffi_type_pointer };
 
-#define FAILURE false
-#define SUCCESS true
-
 JsArray JsArrayNew() {
 	JsArray self = malloc(sizeof(struct jsArrayWrapper));
 	if (!self) goto fail;
@@ -32,7 +29,7 @@ fail:
 	return NULL;
 }
 
-static bool setupSort(JsArray self) {
+static SetupResult setupSort(JsArray self) {
 	void *code;
 	self->sortClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
 	if (!self->sortClosure)
@@ -48,7 +45,7 @@ static bool setupSort(JsArray self) {
 	return SUCCESS;
 }
 
-static bool setupReduce(JsArray self) {
+static SetupResult setupReduce(JsArray self) {
 	void *code;
 	self->reduceClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
 	if (!self->reduceClosure)
@@ -64,7 +61,7 @@ static bool setupReduce(JsArray self) {
 	return SUCCESS;
 }
 
-static bool setupMap(JsArray self) {
+static SetupResult setupMap(JsArray self) {
 	void *code;
 	self->mapClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
 	if (!self->mapClosure)
