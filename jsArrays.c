@@ -1,4 +1,4 @@
-//#include <ffi.h>
+#include <ffi.h>
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -10,14 +10,15 @@ typedef bool (*IntComp)(int a, int b);
 typedef int (*IntReduce)(int accum, int curr);
 typedef int (*IntMap)(int curr);
 
-typedef void (*SortWrapper)(IntComp functptr);
-typedef void (*SortFunc)(IntComp funcptr, JsArray jsArray);
+typedef void (*SortFunc)(IntComp funcptr);
 
 typedef int (*ReduceWrapper) (IntReduce funcptr, int start);
 typedef int (*ReduceFunc)(IntReduce funcptr, int start, JsArray jsArray);
 
 typedef JsArray (*MapWrapper)(IntMap funcptr);
 typedef JsArray (*MapFunc)(IntMap funcptr, JsArray jsArray);
+
+typedef void (*FreeFunc)();
 
 #define FOR(i, a, x) for(int i = a; i < x; i++)
 
@@ -30,10 +31,15 @@ struct jsArrayWrapper {
 	int* array;
 	int len;
 	int cap;
-	SortFunc sort;
-	ReduceFunc reduce;
-	MapFunc map;
+	SortFunc sort;		ffi_closure* sortClosure;	ffi_cif sortCif;
+	ReduceFunc reduce;	ffi_closure* reduceClosure;	ffi_cif reduceCif;
+	MapFunc map;		ffi_closure* mapClosure;	ffi_cif mapCif;
+	FreeFunc free;
 };
+
+static ffi_type* sortArgTypes[] = { &ffi_type_pointer };
+static ffi_type* reduceArgTypes[] = { &ffi_type_pointer, &ffi_type_sint };
+static ffi_type* mapArgTypes[]    = { &ffi_type_pointer };
 
 JsArray JsArrayNew();
 void JsArrayAppend(JsArray jsArray, int num);
@@ -43,7 +49,9 @@ void JsArrayPrint(char *preamble, JsArray jsArray);
 
 bool isGreater(int a, int b);
 bool isLesser(int a, int b);
-void sortingFunc(IntComp funcptr, JsArray jsArray);
+
+static void sort_handler(ffi_cif* cif, void* ret, void** args, void* user_data);
+static void sortingFunc(JsArray self, IntComp funcptr);
 
 int toSum(int accum, int curr);
 int toMultiple(int accum, int curr);
@@ -87,22 +95,22 @@ int main(void) {
 
 	printf("\n");
 
-	jsArray->sort(isGreater, jsArray);
+	jsArray->sort(isGreater);
 
 	JsArrayPrint("Items in isGreater sorted array:", jsArray);
 
-	jsArray->sort(isLesser, jsArray);
+	jsArray->sort(isLesser);
 
 	JsArrayPrint("Items in isLesser sorted array:", jsArray);
 	
 	printf("\n");
 
-	threeTimes->sort(isGreater, threeTimes);
+	threeTimes->sort(isGreater);
 
 	JsArrayPrint("Items in three times isGreater sorted array:", threeTimes);
 	JsArrayFree(threeTimes);
 
-	square->sort(isLesser, square);
+	square->sort(isLesser);
 
 	JsArrayPrint("Items in square isLesser sorted array:", square);
 	JsArrayFree(square);
@@ -119,17 +127,43 @@ int main(void) {
 	return EXIT_SUCCESS;
 }
 
+static bool setupSort(JsArray self);
+
 JsArray JsArrayNew() {
-	JsArray jsArray = malloc(sizeof(struct jsArrayWrapper));
+	JsArray self = malloc(sizeof(struct jsArrayWrapper));
 
-	jsArray->array = malloc(sizeof(int));
-	jsArray->len = 0;
-	jsArray->cap = 1;
-	jsArray->sort = sortingFunc;
-	jsArray->reduce = reducingFunc;
-	jsArray->map = mappingFunc;
+	self->array = malloc(sizeof(int));
+	self->len = 0;
+	self->cap = 1;
 
-	return jsArray;
+	if (!setupSort(self)) 
+		return NULL;
+	
+	self->reduce = reducingFunc;
+	self->map = mappingFunc;
+	//self->free = freeFunc;
+	
+	return self;
+}
+
+static bool setupSort(JsArray self) {
+	void *code;
+	self->sortClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
+	if (!self->sortClosure) {
+		free(self->array);
+		free(self);
+		return false;
+	}
+
+	if (ffi_prep_cif(&self->sortCif, FFI_DEFAULT_ABI, 1, &ffi_type_void, sortArgTypes) != FFI_OK ||
+	    ffi_prep_closure_loc(self->sortClosure, &self->sortCif, sort_handler, self, code) != FFI_OK) {
+		ffi_closure_free(self->sortClosure);
+		free(self->array);
+		free(self);
+		return false;
+	}
+
+	self->sort = (SortFunc)code;
 }
 
 void JsArrayAppend(JsArray jsArray, int num) {		
@@ -174,13 +208,19 @@ bool isLesser(int a, int b) {
 	return a < b;
 }
 
-void sortingFunc(IntComp funcptr, JsArray jsArray) {
-	int* cArray = jsArray->array;
+static void sort_handler(ffi_cif* cif, void* ret, void** args, void* user_data) {
+	JsArray self = user_data;
+	IntComp cmp = *(IntComp*)args[0];
+	sortingFunc(self, cmp);
+}
 
-	for (int i = 0; i < jsArray->len - 1; i++) {
+static void sortingFunc(JsArray self, IntComp funcptr) {
+	int* cArray = self->array;
+
+	for (int i = 0; i < self->len - 1; i++) {
 		int min = i;
 
-		for (int j = i + 1; j < jsArray->len; j++)
+		for (int j = i + 1; j < self->len; j++)
 			if (funcptr(cArray[j], cArray[min])) min = j;
 
 		if (min != i) {
