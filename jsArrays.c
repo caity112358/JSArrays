@@ -1,8 +1,9 @@
+//#include <ffi.h>
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-struct jsArrayWrapper;
 typedef struct jsArrayWrapper *JsArray;
 
 typedef bool (*IntComp)(int a, int b);
@@ -18,7 +19,7 @@ typedef int (*ReduceFunc)(IntReduce funcptr, int start, JsArray jsArray);
 typedef JsArray (*MapWrapper)(IntMap funcptr);
 typedef JsArray (*MapFunc)(IntMap funcptr, JsArray jsArray);
 
-#define FOR(i, x) for(int i = 0; i < x; i++)
+#define FOR(i, a, x) for(int i = a; i < x; i++)
 
 #define PAIR(t1, t2) typedef struct {\
 	t1 value1;\
@@ -36,6 +37,7 @@ struct jsArrayWrapper {
 
 JsArray JsArrayNew();
 void JsArrayAppend(JsArray jsArray, int num);
+static void resize(JsArray jsArray);
 void JsArrayFree(JsArray jsArray);
 void JsArrayPrint(char *preamble, JsArray jsArray);
 
@@ -133,14 +135,18 @@ JsArray JsArrayNew() {
 void JsArrayAppend(JsArray jsArray, int num) {		
 	jsArray->array[jsArray->len++] = num;
 
-	if (jsArray->len >= jsArray->cap) {		
-		jsArray->cap *= 2;
-		jsArray->array = realloc(jsArray->array, jsArray->cap * sizeof(int));
-		
-		if (jsArray->array == NULL) {
-			fprintf(stderr, "Bad realloc");
-			exit(1);
-		}
+	if (jsArray->len >= jsArray->cap) {
+		resize(jsArray);
+	}
+}
+
+static void resize(JsArray jsArray) {
+	jsArray->cap *= 2;
+	jsArray->array = realloc(jsArray->array, jsArray->cap * sizeof(int));
+	
+	if (jsArray->array == NULL) {
+		fprintf(stderr, "Bad realloc");
+		exit(1);
 	}
 }
 
