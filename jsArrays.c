@@ -1,4 +1,5 @@
 #include "jsArrays.h"
+#include <ffi.h>
 
 static Result setupSort(JsArray self);
 static Result setupMap(JsArray self);
@@ -44,7 +45,7 @@ static Result setupSort(JsArray self) {
 		return FAILURE;
 
 	if (
-		ffi_prep_cif(&self->sortCif, FFI_DEFAULT_ABI, 1, &ffi_type_void, sortArgTypes) != FFI_OK 
+		ffi_prep_cif(&self->sortCif, FFI_DEFAULT_ABI, 1, &ffi_type_pointer, sortArgTypes) != FFI_OK 
 		||ffi_prep_closure_loc(self->sortClosure, &self->sortCif, sort_handler, self, code) != FFI_OK
 	)
 		return FAILURE;
@@ -128,10 +129,11 @@ void JsArrayPrint(char *preamble, JsArray jsArray) {
 static void sort_handler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	IntComp cmp = *(IntComp*)args[0];
-	return sortingFunc(self, cmp);
+	
+	*(JsArray*) ret = sortingFunc(self, cmp);
 }
 
-void sortingFunc(JsArray self, IntComp funcptr) {
+JsArray sortingFunc(JsArray self, IntComp funcptr) {
 	int* cArray = self->array;
 
 	for (int i = 0; i < self->len - 1; i++) {
@@ -146,6 +148,8 @@ void sortingFunc(JsArray self, IntComp funcptr) {
 			cArray[i] = temp;
 		}
 	}
+
+	return self;
 }
 
 static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {

@@ -37,7 +37,7 @@ void JsArrayFree(JsArray jsArray);
 
 void JsArrayPrint(char *preamble, JsArray jsArray);
 
-void sortingFunc(JsArray self, IntComp funcptr);
+JsArray sortingFunc(JsArray self, IntComp funcptr);
 
 int reducingFunc(JsArray self, IntReduce funcptr, int start);
 
