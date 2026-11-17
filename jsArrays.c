@@ -9,12 +9,21 @@ typedef bool (*IntComp)(int a, int b);
 typedef int (*IntReduce)(int accum, int curr);
 typedef int (*IntMap)(int curr);
 
+typedef void (*SortWrapper)(IntComp functptr);
 typedef void (*SortFunc)(IntComp funcptr, JsArray jsArray);
+
+typedef int (*ReduceWrapper) (IntReduce funcptr, int start);
 typedef int (*ReduceFunc)(IntReduce funcptr, int start, JsArray jsArray);
+
+typedef JsArray (*MapWrapper)(IntMap funcptr);
 typedef JsArray (*MapFunc)(IntMap funcptr, JsArray jsArray);
 
-#define hi(a, b) printf("%d %d", a, b);
 #define FOR(i, x) for(int i = 0; i < x; i++)
+
+#define PAIR(t1, t2) typedef struct {\
+	t1 value1;\
+	t1 value2;\
+} PAIR_##t1_##t2;
 
 struct jsArrayWrapper {
 	int* array;
@@ -27,7 +36,8 @@ struct jsArrayWrapper {
 
 JsArray JsArrayNew();
 void JsArrayAppend(JsArray jsArray, int num);
-void JSArrayFree(JsArray jsArray);
+void JsArrayFree(JsArray jsArray);
+void JsArrayPrint(char *preamble, JsArray jsArray);
 
 bool isGreater(int a, int b);
 bool isLesser(int a, int b);
@@ -63,60 +73,44 @@ int main(void) {
 
 	printf("Array length: %d\n", jsArray->len);
 
-	printf("Items in unsorted array:");
-	for (int i = 0; i < jsArray->len; i++)
-		printf(" %d", jsArray->array[i]);
-	printf("\n\n");
-
-	JsArray threeTimes = jsArray->map(toTimesThree, jsArray);
-	printf("Items in three times mapped array:");
-	for (int i = 0; i < threeTimes->len; i++)
-		printf(" %d", threeTimes->array[i]);
+	JsArrayPrint("Items in unsorted array:", jsArray);
+	
 	printf("\n");
 
+	JsArray threeTimes = jsArray->map(toTimesThree, jsArray);
+	JsArrayPrint("Items in three times mapped array:", threeTimes);
+
 	JsArray square = jsArray->map(toSquare, jsArray);
-	printf("Items in square mapped array:");
-	for (int i = 0; i < square->len; i++)
-		printf(" %d", square->array[i]);
-	printf("\n\n");
+	JsArrayPrint("Items in square mapped array:", square);
+
+	printf("\n");
 
 	jsArray->sort(isGreater, jsArray);
 
-	printf("Items in isGreater sorted array:");
-	for (int i = 0; i < jsArray->len; i++)
-		printf(" %d", jsArray->array[i]);
-	printf("\n");
+	JsArrayPrint("Items in isGreater sorted array:", jsArray);
 
 	jsArray->sort(isLesser, jsArray);
 
-	printf("Items in isLesser sorted array:");
-	for (int i = 0; i < jsArray->len; i++)
-		printf(" %d", jsArray->array[i]);
-	printf("\n\n");
-
-	threeTimes->sort(isGreater, threeTimes);
-
-	printf("Items in three times isGreater sorted array:");
-	for (int i = 0; i < threeTimes->len; i++)
-		printf(" %d", threeTimes->array[i]);
-	JsArrayFree(threeTimes);
+	JsArrayPrint("Items in isLesser sorted array:", jsArray);
 	
 	printf("\n");
 
+	threeTimes->sort(isGreater, threeTimes);
+
+	JsArrayPrint("Items in three times isGreater sorted array:", threeTimes);
+	JsArrayFree(threeTimes);
+
 	square->sort(isLesser, square);
 
-	printf("Items in square isLesser sorted array:");
-	for (int i = 0; i < square->len; i++)
-		printf(" %d", square->array[i]);
+	JsArrayPrint("Items in square isLesser sorted array:", square);
 	JsArrayFree(square);
 	
-	printf("\n\n");
+	printf("\n");
 
 	printf("Array reduced to sum: %d\n", jsArray->reduce(toSum, 0, jsArray));
-
-	printf("Array reduced to multiple: %d", jsArray->reduce(toMultiple, 1, jsArray));
+	printf("Array reduced to multiple: %d\n", jsArray->reduce(toMultiple, 1, jsArray));
 	
-	printf("\n\n");
+	printf("\n");
 
 	JsArrayFree(jsArray);
 	
@@ -139,9 +133,7 @@ JsArray JsArrayNew() {
 void JsArrayAppend(JsArray jsArray, int num) {		
 	jsArray->array[jsArray->len++] = num;
 
-	if (jsArray->len >= jsArray->cap) {
-		printf("Reallocating from %d to %d\n", jsArray->cap, 2 * jsArray->cap);
-		
+	if (jsArray->len >= jsArray->cap) {		
 		jsArray->cap *= 2;
 		jsArray->array = realloc(jsArray->array, jsArray->cap * sizeof(int));
 		
@@ -152,11 +144,20 @@ void JsArrayAppend(JsArray jsArray, int num) {
 	}
 }
 
-void JSArrayFree(JsArray jsArray) {
+void JsArrayFree(JsArray jsArray) {
 	free(jsArray->array);
 	free(jsArray);
 
 	return;
+}
+
+void JsArrayPrint(char *preamble, JsArray jsArray) {
+	printf("%s", preamble);
+	
+	for (int i = 0; i < jsArray->len; i++)
+		printf(" %d", jsArray->array[i]);
+
+	printf("\n");
 }
 
 bool isGreater(int a, int b) {
@@ -215,7 +216,6 @@ JsArray mappingFunc(IntMap funcptr, JsArray jsArray) {
 	JsArray mapped = JsArrayNew();
 
 	for (int i = 0; i < jsArray->len; i++) {
-		printf("int %d: %d\n", i, jsArray->array[i]);
 		JsArrayAppend(mapped, funcptr(jsArray->array[i]));
 	}
 
