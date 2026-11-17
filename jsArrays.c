@@ -10,7 +10,8 @@ static Result setupAppend(JsArray self);
 static Result setupPrint(JsArray self);
 
 static void resize(JsArray jsArray);
-static void sort_handler(ffi_cif* cif, void* ret, void** args, void* user_data);
+
+static void sortHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void concatHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
@@ -63,7 +64,7 @@ static Result setupSort(JsArray self) {
 
 	if (
 		ffi_prep_cif(&self->sortCif, FFI_DEFAULT_ABI, 1, &ffi_type_pointer, sortArgTypes) != FFI_OK 
-		||ffi_prep_closure_loc(self->sortClosure, &self->sortCif, sort_handler, self, code) != FFI_OK
+		||ffi_prep_closure_loc(self->sortClosure, &self->sortCif, sortHandler, self, code) != FFI_OK
 	)
 		return FAILURE;
 
@@ -179,7 +180,7 @@ void JsArrayFree(JsArray self) {
 	return;
 }
 
-static void sort_handler(ffi_cif* cif, void* ret, void** args, void* user_data) {
+static void sortHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	IntComp cmp = *(IntComp*)args[0];
 	

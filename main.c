@@ -40,6 +40,9 @@ int newMain(void) {
 	JsArray sortedMapped = jsArray->sort(isGreater)->map(toSquare);
 	sortedMapped->print("Sorted and squared array:");
 
+	// Leaks memory
+	jsArray->sort(isLesser)->map(toTimesThree)->print("Sorted and multiplied array:"); 
+
 	JsArrayFree(jsArray);
 	JsArrayFree(sortedMapped);
 	
