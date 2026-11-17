@@ -13,6 +13,9 @@ typedef void (*SortFunc)(IntComp funcptr, JsArray jsArray);
 typedef int (*ReduceFunc)(IntReduce funcptr, int start, JsArray jsArray);
 typedef JsArray (*MapFunc)(IntMap funcptr, JsArray jsArray);
 
+#define hi(a, b) printf("%d %d", a, b);
+#define FOR(i, x) for(int i = 0; i < x; i++)
+
 struct jsArrayWrapper {
 	int* array;
 	int len;
@@ -24,6 +27,7 @@ struct jsArrayWrapper {
 
 JsArray JsArrayNew();
 void JsArrayAppend(JsArray jsArray, int num);
+void JSArrayFree(JsArray jsArray);
 
 bool isGreater(int a, int b);
 bool isLesser(int a, int b);
@@ -49,8 +53,8 @@ int main(void) {
 
 	JsArray jsArray = JsArrayNew();
 
-	printf("Enter %d integers: ", jsArray->len);
-	for (int i = 0; i < jsArray->len; i++) {
+	printf("Enter %d integers: ", arrayLength);
+	for (int i = 0; i < arrayLength; i++) {
 		int num;
 		scanf("%d", &num);
 		JsArrayAppend(jsArray, num);
@@ -95,6 +99,8 @@ int main(void) {
 	printf("Items in three times isGreater sorted array:");
 	for (int i = 0; i < threeTimes->len; i++)
 		printf(" %d", threeTimes->array[i]);
+	JsArrayFree(threeTimes);
+	
 	printf("\n");
 
 	square->sort(isLesser, square);
@@ -102,7 +108,8 @@ int main(void) {
 	printf("Items in square isLesser sorted array:");
 	for (int i = 0; i < square->len; i++)
 		printf(" %d", square->array[i]);
-
+	JsArrayFree(square);
+	
 	printf("\n\n");
 
 	printf("Array reduced to sum: %d\n", jsArray->reduce(toSum, 0, jsArray));
@@ -111,15 +118,17 @@ int main(void) {
 	
 	printf("\n\n");
 
+	JsArrayFree(jsArray);
+	
 	return EXIT_SUCCESS;
 }
 
 JsArray JsArrayNew() {
 	JsArray jsArray = malloc(sizeof(struct jsArrayWrapper));
 
-	jsArray->array = malloc(8 * sizeof(int));
+	jsArray->array = malloc(sizeof(int));
 	jsArray->len = 0;
-	jsArray->cap = 8;
+	jsArray->cap = 1;
 	jsArray->sort = sortingFunc;
 	jsArray->reduce = reducingFunc;
 	jsArray->map = mappingFunc;
@@ -127,12 +136,27 @@ JsArray JsArrayNew() {
 	return jsArray;
 }
 
-void JsArrayAppend(JsArray jsArray, int num) {
-	if (jsArray->len == jsArray->cap) {
-		jsArray->array = realloc(jsArray->array, jsArray->cap * 2);
-	}
-		
+void JsArrayAppend(JsArray jsArray, int num) {		
 	jsArray->array[jsArray->len++] = num;
+
+	if (jsArray->len >= jsArray->cap) {
+		printf("Reallocating from %d to %d\n", jsArray->cap, 2 * jsArray->cap);
+		
+		jsArray->cap *= 2;
+		jsArray->array = realloc(jsArray->array, jsArray->cap * sizeof(int));
+		
+		if (jsArray->array == NULL) {
+			fprintf(stderr, "Bad realloc");
+			exit(1);
+		}
+	}
+}
+
+void JSArrayFree(JsArray jsArray) {
+	free(jsArray->array);
+	free(jsArray);
+
+	return;
 }
 
 bool isGreater(int a, int b) {
@@ -191,6 +215,7 @@ JsArray mappingFunc(IntMap funcptr, JsArray jsArray) {
 	JsArray mapped = JsArrayNew();
 
 	for (int i = 0; i < jsArray->len; i++) {
+		printf("int %d: %d\n", i, jsArray->array[i]);
 		JsArrayAppend(mapped, funcptr(jsArray->array[i]));
 	}
 
