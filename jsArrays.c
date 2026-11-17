@@ -22,7 +22,8 @@ struct jsArrayWrapper {
 	MapFunc map;
 };
 
-JsArray newjsArray(int arrayLength);
+JsArray JsArrayNew();
+void JsArrayAppend(JsArray jsArray, int num);
 
 bool isGreater(int a, int b);
 bool isLesser(int a, int b);
@@ -46,11 +47,14 @@ int main(void) {
 	printf("Enter array length: ");
 	scanf("%d", &arrayLength);
 
-	JsArray jsArray = newjsArray(arrayLength);
+	JsArray jsArray = JsArrayNew();
 
 	printf("Enter %d integers: ", jsArray->len);
-	for (int i = 0; i < jsArray->len; i++)
-		scanf("%d", &jsArray->array[i]);
+	for (int i = 0; i < jsArray->len; i++) {
+		int num;
+		scanf("%d", &num);
+		JsArrayAppend(jsArray, num);
+	}
 	printf("\n");
 
 	printf("Array length: %d\n", jsArray->len);
@@ -104,22 +108,31 @@ int main(void) {
 	printf("Array reduced to sum: %d\n", jsArray->reduce(toSum, 0, jsArray));
 
 	printf("Array reduced to multiple: %d", jsArray->reduce(toMultiple, 1, jsArray));
-
+	
 	printf("\n\n");
 
 	return EXIT_SUCCESS;
 }
 
-JsArray newjsArray( int arrayLength ) {
+JsArray JsArrayNew() {
 	JsArray jsArray = malloc(sizeof(struct jsArrayWrapper));
 
-	jsArray->array = malloc(arrayLength * sizeof(int));
-	jsArray->len = arrayLength;
+	jsArray->array = malloc(8 * sizeof(int));
+	jsArray->len = 0;
+	jsArray->cap = 8;
 	jsArray->sort = sortingFunc;
 	jsArray->reduce = reducingFunc;
 	jsArray->map = mappingFunc;
 
 	return jsArray;
+}
+
+void JsArrayAppend(JsArray jsArray, int num) {
+	if (jsArray->len == jsArray->cap) {
+		jsArray->array = realloc(jsArray->array, jsArray->cap * 2);
+	}
+		
+	jsArray->array[jsArray->len++] = num;
 }
 
 bool isGreater(int a, int b) {
@@ -175,10 +188,10 @@ int toSquare(int curr) {
 }
 
 JsArray mappingFunc(IntMap funcptr, JsArray jsArray) {
-	JsArray mapped = newjsArray(jsArray->len);
+	JsArray mapped = JsArrayNew();
 
 	for (int i = 0; i < jsArray->len; i++) {
-		mapped->array[i] = funcptr(jsArray->array[i]);
+		JsArrayAppend(mapped, funcptr(jsArray->array[i]));
 	}
 
 	return mapped;
