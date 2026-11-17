@@ -29,7 +29,7 @@ fail:
 	return NULL;
 }
 
-static SetupResult setupSort(JsArray self) {
+static Result setupSort(JsArray self) {
 	void *code;
 	self->sortClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
 	if (!self->sortClosure)
@@ -45,7 +45,7 @@ static SetupResult setupSort(JsArray self) {
 	return SUCCESS;
 }
 
-static SetupResult setupReduce(JsArray self) {
+static Result setupReduce(JsArray self) {
 	void *code;
 	self->reduceClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
 	if (!self->reduceClosure)
@@ -61,7 +61,7 @@ static SetupResult setupReduce(JsArray self) {
 	return SUCCESS;
 }
 
-static SetupResult setupMap(JsArray self) {
+static Result setupMap(JsArray self) {
 	void *code;
 	self->mapClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
 	if (!self->mapClosure)
