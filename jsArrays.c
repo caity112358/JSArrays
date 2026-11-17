@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ffi.h>
 
 #include <stdbool.h>
@@ -30,7 +31,6 @@ struct jsArrayWrapper {
 	SortFunc sort;		ffi_closure* sortClosure;	ffi_cif sortCif;
 	ReduceFunc reduce;	ffi_closure* reduceClosure;	ffi_cif reduceCif;
 	MapFunc map;		ffi_closure* mapClosure;	ffi_cif mapCif;
-	FreeFunc free;		ffi_closure* freeClosure;	ffi_cif	freeCif;
 };
 
 static ffi_type* sortArgTypes[] = { &ffi_type_pointer };
@@ -41,7 +41,6 @@ JsArray JsArrayNew();
 void JsArrayAppend(JsArray jsArray, int num);
 static void resize(JsArray jsArray);
 
-static void freeHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 void JsArrayFree(JsArray jsArray);
 
 void JsArrayPrint(char *preamble, JsArray jsArray);
@@ -54,10 +53,12 @@ static void sortingFunc(JsArray self, IntComp funcptr);
 
 int toSum(int accum, int curr);
 int toMultiple(int accum, int curr);
+static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 int reducingFunc(JsArray self, IntReduce funcptr, int start);
 
 int toTimesThree(int curr);
 int toSquare(int curr);
+static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 JsArray mappingFunc(JsArray self, IntMap funcptr);
 
 int main(void) {
@@ -131,78 +132,74 @@ static bool setupFree(JsArray self);
 
 JsArray JsArrayNew() {
 	JsArray self = malloc(sizeof(struct jsArrayWrapper));
-
+	if (!self) goto fail;
+	
 	self->array = malloc(sizeof(int));
+	if (!self->array) goto fail;
+	
 	self->len = 0;
 	self->cap = 1;
 
-	self->freeClosure = NULL;
 	self->sortClosure = NULL;
 	self->mapClosure = NULL;
 	self->reduceClosure = NULL;
-	
-	if (setupFree(self) == FAILURE)
-		return NULL;
-	if (setupSort(self) == FAILURE) 
-		return NULL;
-	if (setupReduce(self) == FAILURE)
-		return NULL;
-	if (setupMap(self) == FAILURE)
-		return NULL;
-	
+
+	if (setupSort(self) == FAILURE) goto fail;
+	if (setupReduce(self) == FAILURE) goto fail;
+	if (setupMap(self) == FAILURE) goto fail;
+
 	return self;
-}
-
-static bool setupFree(JsArray self) {
-	void *code;
-	self->freeClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
-
-	if (!self->freeClosure) {
-		free(self->array);
-		free(self);
-		return FAILURE;
-	}
-
-	if (
-		ffi_prep_cif(&self->freeCif, FFI_DEFAULT_ABI, 0, &ffi_type_void, freeArgTypes) != FFI_OK
-		||ffi_prep_closure_loc(self->freeClosure, &self->freeCif, freeHandler, self, code) != FFI_OK
-	) {
-		ffi_closure_free(self->freeClosure);
-		free(self->array);
-		free(self);
-		return FAILURE;
-	}
-
-	self->free = (FreeFunc) code;
 	
-	return SUCCESS;
+fail:
+	if (self) JsArrayFree(self);
+	return NULL;
 }
 
 static bool setupSort(JsArray self) {
 	void *code;
 	self->sortClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
-	if (!self->sortClosure) {
-		self->free();
+	if (!self->sortClosure)
 		return FAILURE;
-	}
 
-	if (ffi_prep_cif(&self->sortCif, FFI_DEFAULT_ABI, 1, &ffi_type_void, sortArgTypes) != FFI_OK ||
-	    ffi_prep_closure_loc(self->sortClosure, &self->sortCif, sort_handler, self, code) != FFI_OK) {
-		self->free();
+	if (
+		ffi_prep_cif(&self->sortCif, FFI_DEFAULT_ABI, 1, &ffi_type_void, sortArgTypes) != FFI_OK 
+		||ffi_prep_closure_loc(self->sortClosure, &self->sortCif, sort_handler, self, code) != FFI_OK
+	)
 		return FAILURE;
-	}
 
 	self->sort = (SortFunc) code;
 	return SUCCESS;
 }
 
 static bool setupReduce(JsArray self) {
-	
+	void *code;
+	self->reduceClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
+	if (!self->reduceClosure)
+		return FAILURE;
+
+	if (
+		ffi_prep_cif(&self->reduceCif, FFI_DEFAULT_ABI, 2, &ffi_type_sint, reduceArgTypes) != FFI_OK
+		|| ffi_prep_closure_loc(self->reduceClosure, &self->reduceCif, reduceHandler, self, code) != FFI_OK
+	) 
+		return FAILURE;
+
+	self->reduce = (ReduceFunc) code;
 	return SUCCESS;
 }
 
 static bool setupMap(JsArray self) {
+	void *code;
+	self->mapClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
+	if (!self->mapClosure)
+		return FAILURE;
 
+	if (
+		ffi_prep_cif(&self->mapCif, FFI_DEFAULT_ABI, 1, &ffi_type_pointer, mapArgTypes) != FFI_OK
+		|| ffi_prep_closure_loc(self->mapClosure, &self->mapCif, mapHandler, self, code) != FFI_OK
+	) 
+		return FAILURE;
+
+	self->map = (MapFunc) code;
 	return SUCCESS;
 }
 
@@ -224,17 +221,13 @@ static void resize(JsArray jsArray) {
 	}
 }
 
-static void freeHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
-	
-}
-
 void JsArrayFree(JsArray self) {
-	free(self->array);
-
-	ffi_closure_free(self->freeClosure);
-	ffi_closure_free(self->sortClosure);
-	ffi_closure_free(self->mapClosure);
-	ffi_closure_free(self->reduceClosure);
+	assert(self);
+	
+	if (self->array) free(self->array);
+	if (self->sortClosure) ffi_closure_free(self->sortClosure);
+	if (self->mapClosure) ffi_closure_free(self->mapClosure);
+	if (self->reduceClosure)ffi_closure_free(self->reduceClosure);
 	
 	free(self);
 
@@ -316,7 +309,7 @@ int toSquare(int curr) {
 	return curr * curr;
 }
 
-static void mappingHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
+static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	IntMap map = *(IntMap *) args[0];
 	
