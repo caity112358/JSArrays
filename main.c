@@ -1,5 +1,7 @@
 #include "jsArrays.h"
 
+int readInt(void);
+
 bool isGreater(int a, int b);
 bool isLesser(int a, int b);
 
@@ -19,11 +21,9 @@ int main(void) {
 	JsArray jsArray = JsArrayNew();
 
 	printf("Enter %d integers: ", arrayLength);
-	for (int i = 0; i < arrayLength; i++) {
-		int num;
-		scanf("%d", &num);
-		JsArrayAppend(jsArray, num);
-	}
+	for (int i = 0; i < arrayLength; i++) 
+		JsArrayAppend(jsArray, readInt());
+
 	printf("\n");
 
 	JsArray sortedMapped = jsArray->sort(isGreater)->map(toSquare);
@@ -33,6 +33,12 @@ int main(void) {
 	JsArrayFree(sortedMapped);
 	
 	return 0;
+}
+
+int readInt(void) {
+	int n;
+	scanf("%d", &n);
+	return n;
 }
 
 int oldmain(void) {
