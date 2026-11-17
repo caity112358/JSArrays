@@ -1,5 +1,13 @@
 #include "jsArrays.h"
 
+static Result setupSort(JsArray self);
+static Result setupMap(JsArray self);
+static Result setupReduce(JsArray self);
+static void resize(JsArray jsArray);
+static void sort_handler(ffi_cif* cif, void* ret, void** args, void* user_data);
+static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
+static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
+
 static ffi_type* sortArgTypes[] = { &ffi_type_pointer };
 static ffi_type* reduceArgTypes[] = { &ffi_type_pointer, &ffi_type_sint };
 static ffi_type* mapArgTypes[]    = { &ffi_type_pointer };
@@ -123,7 +131,7 @@ static void sort_handler(ffi_cif* cif, void* ret, void** args, void* user_data) 
 	return sortingFunc(self, cmp);
 }
 
-static void sortingFunc(JsArray self, IntComp funcptr) {
+void sortingFunc(JsArray self, IntComp funcptr) {
 	int* cArray = self->array;
 
 	for (int i = 0; i < self->len - 1; i++) {

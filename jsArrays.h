@@ -30,22 +30,15 @@ struct jsArrayWrapper {
 };
 
 JsArray JsArrayNew();
-static Result setupSort(JsArray self);
-static Result setupMap(JsArray self);
-static Result setupReduce(JsArray self);
  
 void JsArrayAppend(JsArray jsArray, int num);
-static void resize(JsArray jsArray);
 
 void JsArrayFree(JsArray jsArray);
 
 void JsArrayPrint(char *preamble, JsArray jsArray);
 
-static void sort_handler(ffi_cif* cif, void* ret, void** args, void* user_data);
-static void sortingFunc(JsArray self, IntComp funcptr);
+void sortingFunc(JsArray self, IntComp funcptr);
 
-static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 int reducingFunc(JsArray self, IntReduce funcptr, int start);
 
-static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 JsArray mappingFunc(JsArray self, IntMap funcptr);

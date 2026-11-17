@@ -24,6 +24,25 @@ int main(void) {
 	}
 	printf("\n");
 
+	JsArray sortedMapped = jsArray->sort(isGreater)->map(toSquare);
+	JsArrayPrint("Sorted and squared array:", sortedMapped);
+}
+
+int oldmain(void) {
+	int arrayLength;
+	printf("Enter array length: ");
+	scanf("%d", &arrayLength);
+
+	JsArray jsArray = JsArrayNew();
+
+	printf("Enter %d integers: ", arrayLength);
+	for (int i = 0; i < arrayLength; i++) {
+		int num;
+		scanf("%d", &num);
+		JsArrayAppend(jsArray, num);
+	}
+	printf("\n");
+
 	printf("Array length: %d\n", jsArray->len);
 
 	JsArrayPrint("Items in unsorted array:", jsArray);
