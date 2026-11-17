@@ -9,6 +9,8 @@ int toMultiple(int accum, int curr);
 int toTimesThree(int curr);
 int toSquare(int curr);
 
+int oldmain(void);
+
 int main(void) {
 	int arrayLength;
 	printf("Enter array length: ");
@@ -26,6 +28,11 @@ int main(void) {
 
 	JsArray sortedMapped = jsArray->sort(isGreater)->map(toSquare);
 	JsArrayPrint("Sorted and squared array:", sortedMapped);
+
+	JsArrayFree(jsArray);
+	JsArrayFree(sortedMapped);
+	
+	return 0;
 }
 
 int oldmain(void) {
