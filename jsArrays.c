@@ -1,131 +1,8 @@
-#include <assert.h>
-#include <ffi.h>
-
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-typedef struct jsArrayWrapper *JsArray;
-
-typedef bool (*IntComp)(int a, int b);
-typedef int (*IntReduce)(int accum, int curr);
-typedef int (*IntMap)(int curr);
-
-typedef JsArray (*SortFunc)(IntComp funcptr);
-typedef int (*ReduceFunc) (IntReduce funcptr, int start);
-typedef JsArray (*MapFunc)(IntMap funcptr);
-
-typedef void (*FreeFunc)();
-
-#define FOR(i, a, x) for(int i = a; i < x; i++)
-
-#define PAIR(t1, t2) typedef struct {\
-	t1 value1;\
-	t1 value2;\
-} PAIR_##t1_##t2;
-
-struct jsArrayWrapper {
-	int* array;
-	int len;
-	int cap;
-	SortFunc sort;		ffi_closure* sortClosure;	ffi_cif sortCif;
-	ReduceFunc reduce;	ffi_closure* reduceClosure;	ffi_cif reduceCif;
-	MapFunc map;		ffi_closure* mapClosure;	ffi_cif mapCif;
-};
+#include "jsArrays.h"
 
 static ffi_type* sortArgTypes[] = { &ffi_type_pointer };
 static ffi_type* reduceArgTypes[] = { &ffi_type_pointer, &ffi_type_sint };
 static ffi_type* mapArgTypes[]    = { &ffi_type_pointer };
-
-JsArray JsArrayNew();
-void JsArrayAppend(JsArray jsArray, int num);
-static void resize(JsArray jsArray);
-
-void JsArrayFree(JsArray jsArray);
-
-void JsArrayPrint(char *preamble, JsArray jsArray);
-
-bool isGreater(int a, int b);
-bool isLesser(int a, int b);
-
-static void sort_handler(ffi_cif* cif, void* ret, void** args, void* user_data);
-static void sortingFunc(JsArray self, IntComp funcptr);
-
-int toSum(int accum, int curr);
-int toMultiple(int accum, int curr);
-static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
-int reducingFunc(JsArray self, IntReduce funcptr, int start);
-
-int toTimesThree(int curr);
-int toSquare(int curr);
-static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
-JsArray mappingFunc(JsArray self, IntMap funcptr);
-
-int main(void) {
-	int arrayLength;
-	printf("Enter array length: ");
-	scanf("%d", &arrayLength);
-
-	JsArray jsArray = JsArrayNew();
-
-	printf("Enter %d integers: ", arrayLength);
-	for (int i = 0; i < arrayLength; i++) {
-		int num;
-		scanf("%d", &num);
-		JsArrayAppend(jsArray, num);
-	}
-	printf("\n");
-
-	printf("Array length: %d\n", jsArray->len);
-
-	JsArrayPrint("Items in unsorted array:", jsArray);
-	
-	printf("\n");
-
-	JsArray threeTimes = jsArray->map(toTimesThree);
-	JsArrayPrint("Items in three times mapped array:", threeTimes);
-
-	JsArray square = jsArray->map(toSquare);
-	JsArrayPrint("Items in square mapped array:", square);
-
-	printf("\n");
-
-	jsArray->sort(isGreater);
-
-	JsArrayPrint("Items in isGreater sorted array:", jsArray);
-
-	jsArray->sort(isLesser);
-
-	JsArrayPrint("Items in isLesser sorted array:", jsArray);
-	
-	printf("\n");
-
-	threeTimes->sort(isGreater);
-
-	JsArrayPrint("Items in three times isGreater sorted array:", threeTimes);
-	JsArrayFree(threeTimes);
-
-	square->sort(isLesser);
-
-	JsArrayPrint("Items in square isLesser sorted array:", square);
-	JsArrayFree(square);
-	
-	printf("\n");
-
-	printf("Array reduced to sum: %d\n", jsArray->reduce(toSum, 0));
-	printf("Array reduced to multiple: %d\n", jsArray->reduce(toMultiple, 1));
-	
-	printf("\n");
-
-	JsArrayFree(jsArray);
-	
-	return EXIT_SUCCESS;
-}
-
-static bool setupSort(JsArray self);
-static bool setupMap(JsArray self);
-static bool setupReduce(JsArray self);
-static bool setupFree(JsArray self);
 
 #define FAILURE false
 #define SUCCESS true
@@ -243,14 +120,6 @@ void JsArrayPrint(char *preamble, JsArray jsArray) {
 	printf("\n");
 }
 
-bool isGreater(int a, int b) {
-	return a > b;
-}
-
-bool isLesser(int a, int b) {
-	return a < b;
-}
-
 static void sort_handler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	IntComp cmp = *(IntComp*)args[0];
@@ -274,14 +143,6 @@ static void sortingFunc(JsArray self, IntComp funcptr) {
 	}
 }
 
-int toSum(int accum, int curr) {
-	return accum + curr;
-}
-
-int toMultiple(int accum, int curr) {
-	return accum * curr;
-}
-
 static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	IntReduce reduce = *(IntReduce*)args[0];
@@ -299,14 +160,6 @@ int reducingFunc(JsArray self, IntReduce funcptr, int start) {
 		accumulator = funcptr(accumulator, cArray[i]);
 
 	return accumulator;
-}
-
-int toTimesThree(int curr) {
-	return 3 * curr;
-}
-
-int toSquare(int curr) {
-	return curr * curr;
 }
 
 static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
