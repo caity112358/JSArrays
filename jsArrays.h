@@ -30,7 +30,7 @@ struct jsArrayWrapper {
 	SortFunc sort;		ffi_closure* sortClosure;	ffi_cif sortCif;
 	ReduceFunc reduce;	ffi_closure* reduceClosure;	ffi_cif reduceCif;
 	MapFunc map;		ffi_closure* mapClosure;	ffi_cif mapCif;
-	ConcatFunc concat;	ffi_closure* concatClosure; 	ffi_cif concatCif;
+	ConcatFunc concat;	ffi_closure* concatClosure;	ffi_cif concatCif;
 	AppendFunc append;	ffi_closure* appendClosure;	ffi_cif appendCif;
 	PrintFunc print;	ffi_closure* printClosure;	ffi_cif printCif;
 };
