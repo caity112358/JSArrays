@@ -1,5 +1,6 @@
 #include "jsArrays.h"
 #include <limits.h>
+#include <stdlib.h>
 
 int readInt(void);
 
@@ -12,10 +13,11 @@ int toMultiple(int accum, int curr);
 int toTimesThree(int curr);
 int toSquare(int curr);
 
+int newMain(void);
 int oldmain(void);
 
 int main(void) {
-	return oldmain();
+	return newMain();
 }
 
 int readInt(void) {
@@ -32,22 +34,24 @@ int newMain(void) {
 	JsArray jsArray = JsArrayNew();
 
 	printf("Enter %d integers: ", arrayLength);
-	for (int i = 0; i < arrayLength; i++) 
-		jsArray->append(readInt());
+	for (int i = 0; i < arrayLength; i++)
+		jsArray->append(rand());
+	printf("\n");
 
+	jsArray->print("og array:");
 	printf("\n");
 
 	JsArray sortedMapped = jsArray->sort(isGreater)->map(toSquare);
 	sortedMapped->print("Sorted and squared array:");
 
 	printf("\n");
-	
+
 	// Leaks memory
-	jsArray->sort(isLesser)->map(toTimesThree)->print("Sorted and multiplied array:"); 
+	jsArray->sort(isLesser)->map(toTimesThree)->print("Sorted and multiplied array:");
 
 	JsArrayFree(jsArray);
 	JsArrayFree(sortedMapped);
-	
+
 	return 0;
 }
 
@@ -61,7 +65,7 @@ int oldmain(void) {
 	printf("Enter %d integers: ", arrayLength);
 	for (int i = 0; i < arrayLength; i++)
 		jsArray->append(readInt());
-	
+
 	printf("\n");
 
 	printf("Array length: %d\n", jsArray->len);
