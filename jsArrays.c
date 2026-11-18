@@ -47,28 +47,24 @@ static FuncData funcData[NUM_METHODS] = {
 	{ .nargs = 1, .rtype = &ffi_type_void,    .atypes = printArgTypes,  .handler = printHandler },
 };
 
-static ffi_type **atypes[NUM_METHODS] = {
-	sortArgTypes, reduceArgTypes, mapArgTypes,
-	concatArgTypes, appendArgTypes, printArgTypes
-};
-
 JsArray JsArrayNew() {
 	JsArray self = calloc(1, sizeof(struct jsArrayWrapper));
 	if (!self) goto fail;
-	
-	self->array = malloc(sizeof(int));
+
+	self->array = calloc(1, sizeof(int));
 	if (!self->array) goto fail;
-	
+
 	self->len = 0;
 	self->cap = 1;
 
 	self->closures = calloc(NUM_METHODS, sizeof(ffi_closure *));
 	self->cifs = calloc(NUM_METHODS, sizeof(ffi_cif));
-	
+	if (!self->closures || !self->cifs) goto fail;
+
 	for (int i = 0; i < NUM_METHODS; i++)
-		if (setupMethod(self, i) == FAILURE) 
+		if (setupMethod(self, i) == FAILURE)
 			goto fail;
-	
+
 	return self;
 fail:
 	if (self) JsArrayFree(self);
@@ -82,21 +78,28 @@ static Result setupMethod(JsArray self, int i) {
 		return FAILURE;
 
 	FuncData data = funcData[i];
-	
+
 	if (
 		ffi_prep_cif(&self->cifs[i], FFI_DEFAULT_ABI, data.nargs, data.rtype, data.atypes) != FFI_OK
 		|| ffi_prep_closure_loc(self->closures[i], &self->cifs[i], data.handler, self, code) != FFI_OK
 	)
 		return FAILURE;
 
-	// method = (MethodFuncType) code;
+	switch (i) {
+		case 0: self->sort = code; break;
+		case 1: self->reduce = code; break;
+		case 2: self->map = code; break;
+		case 3: self->concat = code; break;
+		case 4: self->append = code; break;
+		case 5: self->print = code; break;
+	}
 	return SUCCESS;
 }
 
 static void resize(JsArray self) {
 	self->cap *= 2;
 	self->array = realloc(self->array, self->cap * sizeof(int));
-	
+
 	if (self->array == NULL) {
 		fprintf(stderr, "Bad realloc");
 		exit(1);
@@ -105,17 +108,17 @@ static void resize(JsArray self) {
 
 void JsArrayFree(JsArray self) {
 	if (!self) return;
-	
+
 	if (self->array) free(self->array);
 
 	if (self->closures)
 		for (int i = 0; i < NUM_METHODS; i++)
 			if(self->closures[i])
 				ffi_closure_free(self->closures[i]);
-	
-	free(self->closures);
-	free(self->cifs);
-	
+
+	if (self->closures) free(self->closures);
+	if (self->cifs) free(self->cifs);
+
 	free(self);
 
 	return;
@@ -124,7 +127,7 @@ void JsArrayFree(JsArray self) {
 static void sortHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	IntComp cmp = *(IntComp*)args[0];
-	
+
 	*(JsArray*) ret = sortingFunc(self, cmp);
 }
 
@@ -151,7 +154,7 @@ static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 	JsArray self = user_data;
 	IntReduce reduce = *(IntReduce*) args[0];
 	int start = *(int *) args[1];
-	
+
 	*(ffi_arg*) ret = reducingFunc(self, reduce, start);
 }
 
@@ -169,7 +172,7 @@ static int reducingFunc(JsArray self, IntReduce funcptr, int start) {
 static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	IntMap map = *(IntMap *) args[0];
-	
+
 	*(JsArray*) ret = mappingFunc(self, map);
 }
 
@@ -208,7 +211,7 @@ static void appendHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 	*(ffi_arg*) ret = appendingFunc(self, item);
 }
 
-static int appendingFunc(JsArray self, int item) {		
+static int appendingFunc(JsArray self, int item) {
 	self->array[self->len++] = item;
 
 	if (self->len >= self->cap) {
@@ -227,7 +230,7 @@ static void printHandler(ffi_cif* cif, void* ret, void** args, void* user_data) 
 
 static void printingFunc(JsArray self, char *preamble) {
 	printf("%s", preamble);
-	
+
 	for (int i = 0; i < self->len; i++)
 		printf(" %d", self->array[i]);
 
