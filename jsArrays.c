@@ -2,12 +2,7 @@
 #include <ffi.h>
 #include <stdlib.h>
 
-static Result setupSort(JsArray self);
-static Result setupMap(JsArray self);
-static Result setupReduce(JsArray self);
-static Result setupConcat(JsArray self);
-static Result setupAppend(JsArray self);
-static Result setupPrint(JsArray self);
+static Result setupMethod(JsArray self, int i);
 
 static void resize(JsArray jsArray);
 
@@ -25,12 +20,37 @@ static JsArray concattingFunc(JsArray self, JsArray other);
 static int appendingFunc(JsArray self, int item);
 static void printingFunc(JsArray self, char *preamble);
 
-static ffi_type* sortArgTypes[] = { &ffi_type_pointer };
-static ffi_type* reduceArgTypes[] = { &ffi_type_pointer, &ffi_type_sint };
-static ffi_type* mapArgTypes[]    = { &ffi_type_pointer };
-static ffi_type* concatArgTypes[] = { &ffi_type_pointer };
-static ffi_type* appendArgTypes[] = { &ffi_type_sint };
-static ffi_type* printArgTypes[] = { &ffi_type_pointer };
+typedef void (*HandlerFunc)(ffi_cif* cif, void* ret, void** args, void* user_data);
+
+#define NUM_METHODS 6
+
+typedef struct {
+	int nargs;
+	ffi_type *rtype;
+	ffi_type **atypes;
+	HandlerFunc handler;
+} FuncData;
+
+static ffi_type *sortArgTypes[] = { &ffi_type_pointer };
+static ffi_type *reduceArgTypes[] = { &ffi_type_pointer, &ffi_type_sint };
+static ffi_type *mapArgTypes[] = { &ffi_type_pointer };
+static ffi_type *concatArgTypes[] = { &ffi_type_pointer };
+static ffi_type *appendArgTypes[] = { &ffi_type_sint };
+static ffi_type *printArgTypes[] = { &ffi_type_pointer };
+
+static FuncData funcData[NUM_METHODS] = {
+	{ .nargs = 1, .rtype = &ffi_type_pointer, .atypes = sortArgTypes,   .handler = sortHandler },
+	{ .nargs = 2, .rtype = &ffi_type_sint,    .atypes = reduceArgTypes, .handler = reduceHandler },
+	{ .nargs = 1, .rtype = &ffi_type_pointer, .atypes = mapArgTypes,    .handler = mapHandler },
+	{ .nargs = 1, .rtype = &ffi_type_pointer, .atypes = concatArgTypes, .handler = concatHandler },
+	{ .nargs = 1, .rtype = &ffi_type_sint,    .atypes = appendArgTypes, .handler = appendHandler },
+	{ .nargs = 1, .rtype = &ffi_type_void,    .atypes = printArgTypes,  .handler = printHandler },
+};
+
+static ffi_type **atypes[NUM_METHODS] = {
+	sortArgTypes, reduceArgTypes, mapArgTypes,
+	concatArgTypes, appendArgTypes, printArgTypes
+};
 
 JsArray JsArrayNew() {
 	JsArray self = calloc(1, sizeof(struct jsArrayWrapper));
@@ -42,115 +62,34 @@ JsArray JsArrayNew() {
 	self->len = 0;
 	self->cap = 1;
 
-	if (setupSort(self) == FAILURE) goto fail;
-	if (setupReduce(self) == FAILURE) goto fail;
-	if (setupMap(self) == FAILURE) goto fail;
-	if (setupConcat(self) == FAILURE) goto fail;
-	if (setupAppend(self) == FAILURE) goto fail;
-	if (setupPrint(self) == FAILURE) goto fail;
+	self->closures = calloc(NUM_METHODS, sizeof(ffi_closure *));
+	self->cifs = calloc(NUM_METHODS, sizeof(ffi_cif));
+	
+	for (int i = 0; i < NUM_METHODS; i++)
+		if (setupMethod(self, i) == FAILURE) 
+			goto fail;
 	
 	return self;
-	
 fail:
 	if (self) JsArrayFree(self);
 	return NULL;
 }
 
-static Result setupSort(JsArray self) {
+static Result setupMethod(JsArray self, int i) {
 	void *code;
-	self->sortClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
-	if (!self->sortClosure)
+	self->closures[i] = ffi_closure_alloc(sizeof(ffi_closure), &code);
+	if (!self->closures[i])
 		return FAILURE;
 
-	if (
-		ffi_prep_cif(&self->sortCif, FFI_DEFAULT_ABI, 1, &ffi_type_pointer, sortArgTypes) != FFI_OK 
-		||ffi_prep_closure_loc(self->sortClosure, &self->sortCif, sortHandler, self, code) != FFI_OK
-	)
-		return FAILURE;
-
-	self->sort = (SortFunc) code;
-	return SUCCESS;
-}
-
-static Result setupReduce(JsArray self) {
-	void *code;
-	self->reduceClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
-	if (!self->reduceClosure)
-		return FAILURE;
-
-	if (
-		ffi_prep_cif(&self->reduceCif, FFI_DEFAULT_ABI, 2, &ffi_type_sint, reduceArgTypes) != FFI_OK
-		|| ffi_prep_closure_loc(self->reduceClosure, &self->reduceCif, reduceHandler, self, code) != FFI_OK
-	) 
-		return FAILURE;
-
-	self->reduce = (ReduceFunc) code;
-	return SUCCESS;
-}
-
-static Result setupMap(JsArray self) {
-	void *code;
-	self->mapClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
-	if (!self->mapClosure)
-		return FAILURE;
-
-	if (
-		ffi_prep_cif(&self->mapCif, FFI_DEFAULT_ABI, 1, &ffi_type_pointer, mapArgTypes) != FFI_OK
-		|| ffi_prep_closure_loc(self->mapClosure, &self->mapCif, mapHandler, self, code) != FFI_OK
-	) 
-		return FAILURE;
-
-	self->map = (MapFunc) code;
-	return SUCCESS;
-}
-
-static Result setupConcat(JsArray self) {
-	void *code;
-
-	self->concatClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
-	if (!self->concatClosure)
-		return FAILURE;
-
-	if (
-		ffi_prep_cif(&self->concatCif, FFI_DEFAULT_ABI, 1, &ffi_type_pointer, concatArgTypes) != FFI_OK
-		|| ffi_prep_closure_loc(self->concatClosure, &self->concatCif, concatHandler, self, code) != FFI_OK	
-	)
-		return FAILURE;
+	FuncData data = funcData[i];
 	
-	self->concat = (ConcatFunc) code;
-	return SUCCESS;
-}
-
-static Result setupAppend(JsArray self) {
-	void *code;
-
-	self->appendClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
-	if (!self->appendClosure) return FAILURE;
-
 	if (
-		ffi_prep_cif(&self->appendCif, FFI_DEFAULT_ABI, 1, &ffi_type_sint, appendArgTypes) != FFI_OK
-		|| ffi_prep_closure_loc(self->appendClosure, &self->appendCif, appendHandler, self, code) != FFI_OK
+		ffi_prep_cif(&self->cifs[i], FFI_DEFAULT_ABI, data.nargs, data.rtype, data.atypes) != FFI_OK
+		|| ffi_prep_closure_loc(self->closures[i], &self->cifs[i], data.handler, self, code) != FFI_OK
 	)
 		return FAILURE;
-	
-	self->append = (AppendFunc) code;
-	return SUCCESS;
-}
 
-static Result setupPrint(JsArray self) {
-	void *code; 
-
-	self->printClosure = ffi_closure_alloc(sizeof(ffi_closure), &code);
-	if (!self->printClosure) return FAILURE;
-
-	if (
-		ffi_prep_cif(&self->printCif, FFI_DEFAULT_ABI, 1, &ffi_type_void, printArgTypes) != FFI_OK
-		|| ffi_prep_closure_loc(self->printClosure, &self->printCif, printHandler, self, code) != FFI_OK
-	) {
-		return FAILURE;
-	}
-
-	self->print = (PrintFunc) code;
+	// method = (MethodFuncType) code;
 	return SUCCESS;
 }
 
@@ -165,15 +104,17 @@ static void resize(JsArray self) {
 }
 
 void JsArrayFree(JsArray self) {
-	assert(self);
+	if (!self) return;
 	
 	if (self->array) free(self->array);
-	if (self->sortClosure) ffi_closure_free(self->sortClosure);
-	if (self->mapClosure) ffi_closure_free(self->mapClosure);
-	if (self->reduceClosure)ffi_closure_free(self->reduceClosure);
-	if (self->concatClosure) ffi_closure_free(self->concatClosure);
-	if (self->appendClosure) ffi_closure_free(self->appendClosure);
-	if (self->printClosure) ffi_closure_free(self->printClosure);
+
+	if (self->closures)
+		for (int i = 0; i < NUM_METHODS; i++)
+			if(self->closures[i])
+				ffi_closure_free(self->closures[i]);
+	
+	free(self->closures);
+	free(self->cifs);
 	
 	free(self);
 
