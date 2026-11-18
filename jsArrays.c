@@ -203,14 +203,11 @@ static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 }
 
 static JsArray mappingFunc(JsArray self, IntMap funcptr) {
-	JsArray mapped = JsArrayNew();
-	if (!mapped) return NULL;
-
 	for (int i = 0; i < self->length(); i++) {
-		mapped->append(funcptr(self->array[i]));
+		self->array[i] = funcptr(self->array[i]);
 	}
 
-	return mapped;
+	return self;
 }
 
 static void concatHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
