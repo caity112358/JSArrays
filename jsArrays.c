@@ -86,13 +86,14 @@ static Result setupMethod(JsArray self, int i) {
 		return FAILURE;
 
 	switch (i) {
-		case 0: self->sort = code; break;
-		case 1: self->reduce = code; break;
-		case 2: self->map = code; break;
-		case 3: self->concat = code; break;
-		case 4: self->append = code; break;
-		case 5: self->print = code; break;
+		case 0: self->sort = (SortFunc) code; break;
+		case 1: self->reduce = (ReduceFunc) code; break;
+		case 2: self->map = (MapFunc) code; break;
+		case 3: self->concat = (ConcatFunc) code; break;
+		case 4: self->append = (AppendFunc) code; break;
+		case 5: self->print = (PrintFunc) code; break;
 	}
+	
 	return SUCCESS;
 }
 
