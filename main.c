@@ -1,11 +1,10 @@
 #include "jsArrays.h"
 #include <limits.h>
-#include <stdlib.h>
 
 int readInt(void);
 
-bool isGreater(int a, int b);
-bool isLesser(int a, int b);
+bool decreasing(int a, int b);
+bool increasing(int a, int b);
 
 int toSum(int accum, int curr);
 int toMultiple(int accum, int curr);
@@ -22,17 +21,17 @@ int main(void) {
 
 	printf("Enter %d integers: ", arrayLength);
 	for (int i = 0; i < arrayLength; i++)
-		jsArray->append(rand());
+		jsArray->append(readInt());
 	printf("\n");
 
 	jsArray->print("og array:");
 	printf("\n");
 
-	jsArray->sort(isGreater)->map(toSquare)->print("sorted and squared array:");
+	jsArray->sort(decreasing)->map(toSquare)->print("sorted and squared array:");
 
 	printf("\n");
 
-	jsArray->sort(isLesser)->map(toTimesThree)->print("Sorted and multiplied again:");
+	jsArray->sort(increasing)->map(toTimesThree)->print("Sorted and multiplied again:");
 
 	JsArrayFree(jsArray);
 
@@ -45,11 +44,11 @@ int readInt(void) {
 	return n;
 }
 
-bool isGreater(int a, int b) {
+bool decreasing(int a, int b) {
 	return a > b;
 }
 
-bool isLesser(int a, int b) {
+bool increasing(int a, int b) {
 	return a < b;
 }
 

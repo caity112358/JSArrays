@@ -19,7 +19,7 @@ typedef int (*AppendFunc)(int item);
 typedef void (*PrintFunc)(char *preamble);
 typedef int (*LengthFunc)(void);
 
-typedef struct jsArrayData JsArrayData;
+typedef struct jsArrayData *JsArrayData;
 
 struct jsArrayWrapper {
 	int* array;
@@ -30,7 +30,7 @@ struct jsArrayWrapper {
 	AppendFunc append;
 	PrintFunc print;
 	LengthFunc length;
-	JsArrayData *data;
+	JsArrayData data;
 };
 
 JsArray JsArrayNew();

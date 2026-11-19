@@ -9,7 +9,7 @@ typedef enum {
 } Result;
 
 static Result setupMethod(JsArray self, int i);
-
+static void assignMethod(JsArray self, void *code, int i);
 static void resize(JsArray jsArray);
 
 static void sortHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
@@ -54,13 +54,13 @@ static ffi_type *printArgTypes[] = { &ffi_type_pointer };
 static ffi_type *lengthArgTypes[] = {};
 
 static FuncData funcData[NUM_METHODS] = {
-	{ .nargs = 1, .rtype = &ffi_type_pointer, .atypes = sortArgTypes,   .handler = sortHandler },
-	{ .nargs = 2, .rtype = &ffi_type_sint,    .atypes = reduceArgTypes, .handler = reduceHandler },
-	{ .nargs = 1, .rtype = &ffi_type_pointer, .atypes = mapArgTypes,    .handler = mapHandler },
-	{ .nargs = 1, .rtype = &ffi_type_pointer, .atypes = concatArgTypes, .handler = concatHandler },
-	{ .nargs = 1, .rtype = &ffi_type_sint,    .atypes = appendArgTypes, .handler = appendHandler },
-	{ .nargs = 1, .rtype = &ffi_type_void,    .atypes = printArgTypes,  .handler = printHandler },
-	{ .nargs = 0, .rtype = &ffi_type_sint,	  .atypes = lengthArgTypes, .handler = lengthHandler }
+	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = sortArgTypes,		.handler = sortHandler },
+	{	.nargs = 2,	.rtype = &ffi_type_sint,	.atypes = reduceArgTypes,	.handler = reduceHandler },
+	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = mapArgTypes,		.handler = mapHandler },
+	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = concatArgTypes,	.handler = concatHandler },
+	{	.nargs = 1,	.rtype = &ffi_type_sint,	.atypes = appendArgTypes,	.handler = appendHandler },
+	{	.nargs = 1,	.rtype = &ffi_type_void,	.atypes = printArgTypes,	.handler = printHandler },
+	{	.nargs = 0,	.rtype = &ffi_type_sint,	.atypes = lengthArgTypes,	.handler = lengthHandler }
 };
 
 JsArray JsArrayNew() {
@@ -104,6 +104,12 @@ static Result setupMethod(JsArray self, int i) {
 	)
 		return FAILURE;
 
+	assignMethod(self, code, i);
+	
+	return SUCCESS;
+}
+
+static void assignMethod(JsArray self, void *code, int i) {
 	switch (i) {
 		case 0: self->sort = (SortFunc) code; break;
 		case 1: self->reduce = (ReduceFunc) code; break;
@@ -113,8 +119,6 @@ static Result setupMethod(JsArray self, int i) {
 		case 5: self->print = (PrintFunc) code; break;
 		case 6: self->length = (LengthFunc) code; break;
 	}
-	
-	return SUCCESS;
 }
 
 static void resize(JsArray self) {
