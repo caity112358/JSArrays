@@ -19,6 +19,7 @@ static void concatHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 static void appendHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void printHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void lengthHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
+static void cloneHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 
 static JsArray sortingFunc(JsArray self, IntComp funcptr);
 static int reducingFunc(JsArray self, IntReduce funcptr, int start);
@@ -26,6 +27,7 @@ static JsArray mappingFunc(JsArray self, IntMap funcptr);
 static JsArray concattingFunc(JsArray self, JsArray other);
 static int appendingFunc(JsArray self, int item);
 static void printingFunc(JsArray self, char *preamble);
+static JsArray cloningFunc(JsArray self);
 
 typedef void (*HandlerFunc)(ffi_cif* cif, void* ret, void** args, void* user_data);
 
@@ -36,7 +38,7 @@ struct jsArrayData {
 	ffi_cif *cifs;
 };
 
-#define NUM_METHODS 7
+#define NUM_METHODS 8
 
 typedef struct {
 	int nargs;
@@ -52,6 +54,7 @@ static ffi_type *concatArgTypes[] = { &ffi_type_pointer };
 static ffi_type *appendArgTypes[] = { &ffi_type_sint };
 static ffi_type *printArgTypes[] = { &ffi_type_pointer };
 static ffi_type *lengthArgTypes[] = {};
+static ffi_type *cloneArgTypes[] = {};
 
 static FuncData funcData[NUM_METHODS] = {
 	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = sortArgTypes,		.handler = sortHandler },
@@ -60,10 +63,11 @@ static FuncData funcData[NUM_METHODS] = {
 	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = concatArgTypes,	.handler = concatHandler },
 	{	.nargs = 1,	.rtype = &ffi_type_sint,	.atypes = appendArgTypes,	.handler = appendHandler },
 	{	.nargs = 1,	.rtype = &ffi_type_void,	.atypes = printArgTypes,	.handler = printHandler },
-	{	.nargs = 0,	.rtype = &ffi_type_sint,	.atypes = lengthArgTypes,	.handler = lengthHandler }
+	{	.nargs = 0,	.rtype = &ffi_type_sint,	.atypes = lengthArgTypes,	.handler = lengthHandler },
+	{	.nargs = 0, .rtype = &ffi_type_pointer,	.atypes = cloneArgTypes,	.handler = cloneHandler }
 };
 
-JsArray JsArrayNew() {
+JsArray JsArrayNew(void) {
 	JsArray self = calloc(1, sizeof(struct jsArrayWrapper));
 	if (!self) goto fail;
 
@@ -118,6 +122,8 @@ static void assignMethod(JsArray self, void *code, int i) {
 		case 4: self->append = (AppendFunc) code; break;
 		case 5: self->print = (PrintFunc) code; break;
 		case 6: self->length = (LengthFunc) code; break;
+		case 7: self->clone = (CloneFunc) code; break;
+		default: fprintf(stderr, "Unassignable method"); exit(1); break;
 	}
 }
 
@@ -222,13 +228,10 @@ static void concatHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 }
 
 static JsArray concattingFunc(JsArray self, JsArray other) {
-	JsArray new = JsArrayNew();
-	if (!new) return NULL;
+	for (int i = 0; i < other->length(); i++)
+		self->append(other->array[i]);
 
-	for (int i = 0; i < self->length() + other->length(); i++)
-		new->append((i < self->length()) ? self->array[i] : other->array[i - self->length()]);
-
-	return new;
+	return self;
 }
 
 static void appendHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -268,4 +271,20 @@ static void lengthHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 	JsArray self = user_data;
 
 	*(ffi_arg*) ret = self->data->len;
+}
+
+static void cloneHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
+	JsArray self = user_data;
+
+	*(JsArray*) ret = cloningFunc(self);
+}
+
+static JsArray cloningFunc(JsArray self) {
+	JsArray new = JsArrayNew();
+
+	for (int i = 0; i < self->length(); i++) {
+		new->append(self->array[i]);
+	}
+
+	return new;
 }

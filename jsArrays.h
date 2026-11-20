@@ -18,6 +18,7 @@ typedef JsArray (*ConcatFunc)(JsArray other);
 typedef int (*AppendFunc)(int item);
 typedef void (*PrintFunc)(char *preamble);
 typedef int (*LengthFunc)(void);
+typedef JsArray (*CloneFunc)(void);
 
 typedef struct jsArrayData *JsArrayData;
 
@@ -30,8 +31,9 @@ struct jsArrayWrapper {
 	AppendFunc append;
 	PrintFunc print;
 	LengthFunc length;
+	CloneFunc clone;
 	JsArrayData data;
 };
 
-JsArray JsArrayNew();
+JsArray JsArrayNew(void);
 void JsArrayFree(JsArray jsArray);
