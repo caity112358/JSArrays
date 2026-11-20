@@ -3,14 +3,14 @@
 
 int readInt(void);
 
-bool decreasing(int a, int b);
-bool increasing(int a, int b);
+bool decreasing(int a, int b) {	return a > b; }
+bool increasing(int a, int b) { return a < b; }
 
-int toSum(int accum, int curr);
-int toMultiple(int accum, int curr);
+int toSum(int accum, int curr) { return accum + curr; }
+int toMultiple(int accum, int curr) { return accum * curr; }
 
-int toTimesThree(int curr);
-int toSquare(int curr);
+int toTimesThree(int curr) { return 3 * curr; }
+int toSquare(int curr) { return curr * curr; }
 
 int main(void) {
 	int arrayLength;
@@ -26,13 +26,18 @@ int main(void) {
 
 	jsArray->print("og array:");
 	printf("\n");
-
-	jsArray->sort(decreasing)->map(toSquare)->print("sorted and squared array:");
-
+	
+	JsArray clone = jsArray->clone()->sort(decreasing)->map(toSquare);
+	clone->print("sorted and mapped clone");
 	printf("\n");
-
-	jsArray->sort(increasing)->map(toTimesThree)->print("Sorted and multiplied again:");
-
+	
+	jsArray->sort(increasing)->map(toTimesThree)->print("Sorted and multiplied og:");
+	printf("\n");
+	
+	jsArray->concat(clone)->print("concattenated arrays:"); // print should take a separator, maybe even a separator func?
+	printf("\n");
+	
+	JsArrayFree(clone);
 	JsArrayFree(jsArray);
 
 	return 0;
@@ -42,28 +47,4 @@ int readInt(void) {
 	int n;
 	scanf("%d", &n);
 	return n;
-}
-
-bool decreasing(int a, int b) {
-	return a > b;
-}
-
-bool increasing(int a, int b) {
-	return a < b;
-}
-
-int toSum(int accum, int curr) {
-	return accum + curr;
-}
-
-int toMultiple(int accum, int curr) {
-	return accum * curr;
-}
-
-int toTimesThree(int curr) {
-	return 3 * curr;
-}
-
-int toSquare(int curr) {
-	return curr * curr;
 }
