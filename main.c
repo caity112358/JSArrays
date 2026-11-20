@@ -20,11 +20,11 @@ int main(void) {
 	printf("\n");
 
 	JsArray clone = jsArray->clone()->sort(decreasing)->map(toSquare);
-	clone->print("sorted and mapped clone: ", "~", "\n");
+	clone->print("sorted and mapped clone: ", "~", "\n\n");
 
-	jsArray->sort(increasing)->map(toTimesThree)->print("Sorted and multiplied og: ", ".", "\n");
+	jsArray->sort(increasing)->map(toTimesThree)->print("Sorted and multiplied og: ", ".", "\n\n");
 
-	jsArray->concat(clone)->print("concattenated arrays: ", "-", "\n");
+	jsArray->concat(clone)->print("concattenated arrays: ", "-", "\n\n");
 	
 	JsArrayFree(clone);
 	JsArrayFree(jsArray);
