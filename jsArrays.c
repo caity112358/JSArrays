@@ -95,7 +95,7 @@ fail:
 }
 
 static Result setupMethod(JsArray self, int i) {
-	void *code;
+	void *code = NULL;
 	self->data->closures[i] = ffi_closure_alloc(sizeof(ffi_closure), &code);
 	if (!self->data->closures[i])
 		return FAILURE;
