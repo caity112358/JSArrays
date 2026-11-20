@@ -21,14 +21,11 @@ int main(void) {
 
 	JsArray clone = jsArray->clone()->sort(decreasing)->map(toSquare);
 	clone->print("sorted and mapped clone: ", "~", "\n");
-	printf("\n");
 
 	jsArray->sort(increasing)->map(toTimesThree)->print("Sorted and multiplied og: ", ".", "\n");
-	printf("\n");
 
-	jsArray->concat(clone)->print("concattenated arrays: ", "-", "\n"); // print should take a separator, maybe even a separator func?
-	printf("\n");
-
+	jsArray->concat(clone)->print("concattenated arrays: ", "-", "\n");
+	
 	JsArrayFree(clone);
 	JsArrayFree(jsArray);
 
@@ -40,7 +37,6 @@ JsArray scanJsArray(void) {
 	printf("Enter array length: ");
 	if (scanf("%d", &arrayLength) != 1)
 		errorOut("Failed to scan");
-
 
 	JsArray jsArray = JsArrayNew();
 
