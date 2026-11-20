@@ -24,17 +24,17 @@ int main(void) {
 		jsArray->append(readInt());
 	printf("\n");
 
-	jsArray->print("og array:");
+	jsArray->print("og array: ", " ", "\n");
 	printf("\n");
 	
 	JsArray clone = jsArray->clone()->sort(decreasing)->map(toSquare);
-	clone->print("sorted and mapped clone");
+	clone->print("sorted and mapped clone: ", "~", "\n");
 	printf("\n");
 	
-	jsArray->sort(increasing)->map(toTimesThree)->print("Sorted and multiplied og:");
+	jsArray->sort(increasing)->map(toTimesThree)->print("Sorted and multiplied og: ", ".", "\n");
 	printf("\n");
 	
-	jsArray->concat(clone)->print("concattenated arrays:"); // print should take a separator, maybe even a separator func?
+	jsArray->concat(clone)->print("concattenated arrays: ", "-", "\n"); // print should take a separator, maybe even a separator func?
 	printf("\n");
 	
 	JsArrayFree(clone);

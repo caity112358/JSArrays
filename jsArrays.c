@@ -26,7 +26,7 @@ static int reducingFunc(JsArray self, IntReduce funcptr, int start);
 static JsArray mappingFunc(JsArray self, IntMap funcptr);
 static JsArray concattingFunc(JsArray self, JsArray other);
 static int appendingFunc(JsArray self, int item);
-static void printingFunc(JsArray self, char *preamble);
+static void printingFunc(JsArray self, char *preamble, char *separator, char *end);
 static JsArray cloningFunc(JsArray self);
 
 typedef void (*HandlerFunc)(ffi_cif* cif, void* ret, void** args, void* user_data);
@@ -52,7 +52,7 @@ static ffi_type *reduceArgTypes[] = { &ffi_type_pointer, &ffi_type_sint };
 static ffi_type *mapArgTypes[] = { &ffi_type_pointer };
 static ffi_type *concatArgTypes[] = { &ffi_type_pointer };
 static ffi_type *appendArgTypes[] = { &ffi_type_sint };
-static ffi_type *printArgTypes[] = { &ffi_type_pointer };
+static ffi_type *printArgTypes[] = { &ffi_type_pointer, &ffi_type_pointer, &ffi_type_pointer };
 static ffi_type *lengthArgTypes[] = {};
 static ffi_type *cloneArgTypes[] = {};
 
@@ -62,9 +62,9 @@ static FuncData funcData[NUM_METHODS] = {
 	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = mapArgTypes,		.handler = mapHandler },
 	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = concatArgTypes,	.handler = concatHandler },
 	{	.nargs = 1,	.rtype = &ffi_type_sint,	.atypes = appendArgTypes,	.handler = appendHandler },
-	{	.nargs = 1,	.rtype = &ffi_type_void,	.atypes = printArgTypes,	.handler = printHandler },
+	{	.nargs = 3,	.rtype = &ffi_type_void,	.atypes = printArgTypes,	.handler = printHandler },
 	{	.nargs = 0,	.rtype = &ffi_type_sint,	.atypes = lengthArgTypes,	.handler = lengthHandler },
-	{	.nargs = 0, .rtype = &ffi_type_pointer,	.atypes = cloneArgTypes,	.handler = cloneHandler }
+	{	.nargs = 0,	.rtype = &ffi_type_pointer,	.atypes = cloneArgTypes,	.handler = cloneHandler }
 };
 
 JsArray JsArrayNew(void) {
@@ -254,17 +254,21 @@ static int appendingFunc(JsArray self, int item) {
 static void printHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	char *preamble = *(char **) args[0];
-
-	printingFunc(self, preamble);
+	char *separator = *(char **) args[1];
+	char *end = *(char **) args[2];
+	
+	printingFunc(self, preamble, separator, end);
 }
 
-static void printingFunc(JsArray self, char *preamble) {
+static void printingFunc(JsArray self, char *preamble, char *separator, char *end) {
 	printf("%s", preamble);
 
-	for (int i = 0; i < self->length(); i++)
-		printf(" %d", self->array[i]);
+	for (int i = 0; i < self->length(); i++) {
+		if (i != 0) printf("%s", separator);
+		printf("%d", self->array[i]);
+	}
 
-	printf("\n");
+	printf("%s", end);
 }
 
 static void lengthHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {

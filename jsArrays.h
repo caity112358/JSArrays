@@ -16,7 +16,7 @@ typedef int (*ReduceFunc)(IntReduce funcptr, int start);
 typedef JsArray (*MapFunc)(IntMap funcptr);
 typedef JsArray (*ConcatFunc)(JsArray other);
 typedef int (*AppendFunc)(int item);
-typedef void (*PrintFunc)(char *preamble);
+typedef void (*PrintFunc)(char *preamble, char *separator, char *end);
 typedef int (*LengthFunc)(void);
 typedef JsArray (*CloneFunc)(void);
 
