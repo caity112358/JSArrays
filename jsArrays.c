@@ -2,6 +2,7 @@
 #include <ffi.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 typedef enum {
 	FAILURE,
@@ -12,6 +13,7 @@ static Result setupMethod(JsArray self, int i);
 static void assignMethod(JsArray self, void *code, int i);
 static void resize(JsArray jsArray);
 static void resizeTo(JsArray jsArray, int size);
+
 static void sortHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
@@ -20,6 +22,8 @@ static void appendHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 static void printHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void lengthHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void cloneHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
+static void someHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
+static void everyHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 
 static JsArray sortingFunc(JsArray self, IntComp funcptr);
 static int reducingFunc(JsArray self, IntReduce funcptr, int start);
@@ -28,6 +32,8 @@ static JsArray concattingFunc(JsArray self, JsArray other);
 static int appendingFunc(JsArray self, int item);
 static void printingFunc(JsArray self, char *preamble, char *separator, char *end);
 static JsArray cloningFunc(JsArray self);
+static bool someFunc(JsArray self, IntTest test);
+static bool everyFunc(JsArray self, IntTest test);
 
 typedef void (*HandlerFunc)(ffi_cif* cif, void* ret, void** args, void* user_data);
 
@@ -38,7 +44,7 @@ struct jsArrayData {
 	ffi_cif *cifs;
 };
 
-#define NUM_METHODS 8
+#define NUM_METHODS 10
 
 typedef struct {
 	int nargs;
@@ -53,8 +59,8 @@ static ffi_type *mapArgTypes[] = { &ffi_type_pointer };
 static ffi_type *concatArgTypes[] = { &ffi_type_pointer };
 static ffi_type *appendArgTypes[] = { &ffi_type_sint };
 static ffi_type *printArgTypes[] = { &ffi_type_pointer, &ffi_type_pointer, &ffi_type_pointer };
-static ffi_type *lengthArgTypes[] = {};
-static ffi_type *cloneArgTypes[] = {};
+static ffi_type *someArgTypes[] = { &ffi_type_pointer };
+static ffi_type *everyArgTypes[] = { &ffi_type_pointer };
 
 static FuncData funcData[NUM_METHODS] = {
 	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = sortArgTypes,		.handler = sortHandler },
@@ -63,8 +69,10 @@ static FuncData funcData[NUM_METHODS] = {
 	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = concatArgTypes,	.handler = concatHandler },
 	{	.nargs = 1,	.rtype = &ffi_type_sint,	.atypes = appendArgTypes,	.handler = appendHandler },
 	{	.nargs = 3,	.rtype = &ffi_type_void,	.atypes = printArgTypes,	.handler = printHandler },
-	{	.nargs = 0,	.rtype = &ffi_type_sint,	.atypes = lengthArgTypes,	.handler = lengthHandler },
-	{	.nargs = 0,	.rtype = &ffi_type_pointer,	.atypes = cloneArgTypes,	.handler = cloneHandler }
+	{	.nargs = 0,	.rtype = &ffi_type_sint,	.atypes = NULL,			.handler = lengthHandler },
+	{	.nargs = 0,	.rtype = &ffi_type_pointer,	.atypes = NULL,			.handler = cloneHandler },
+	{	.nargs = 1,	.rtype = &ffi_type_uint8,	.atypes = someArgTypes, 	.handler = someHandler },
+	{	.nargs = 1,	.rtype = &ffi_type_uint8,	.atypes = everyArgTypes, 	.handler = everyHandler }
 };
 
 JsArray JsArrayNew(void) {
@@ -123,10 +131,14 @@ static void assignMethod(JsArray self, void *code, int i) {
 		case 5: self->print = (PrintFunc) code; break;
 		case 6: self->length = (LengthFunc) code; break;
 		case 7: self->clone = (CloneFunc) code; break;
+		case 8: self->some = (SomeFunc) code; break;
+		case 9: self->every = (EveryFunc) code; break;
 		default: fprintf(stderr, "Unassignable method"); exit(1); break;
 	}
 }
 static void resizeTo(JsArray self, int size) {
+	if (self->data->cap >= size) return;
+	
 	while (self->data->cap < size) {
 		self->data->cap *= 2;
 	}
@@ -134,7 +146,7 @@ static void resizeTo(JsArray self, int size) {
 	resize(self);
 }
 
-static void resize(JsArray self) {
+static void resize(JsArray self) {	
 	self->array = realloc(self->array, self->data->cap * sizeof(int));
 
 	if (self->array == NULL) {
@@ -148,10 +160,7 @@ void JsArrayFree(JsArray self) {
 
 	if (self->array) free(self->array);
 
-	if (!self->data) {
-		free(self);
-		return;
-	}
+	if (!self->data) goto free_end;
 	
 	if (self->data->closures)
 		for (int i = 0; i < NUM_METHODS; i++)
@@ -160,9 +169,10 @@ void JsArrayFree(JsArray self) {
 
 	if (self->data->closures) free(self->data->closures);
 	if (self->data->cifs) free(self->data->cifs);
+	free(self->data);
 
+free_end:
 	free(self);
-
 	return;
 }
 
@@ -197,7 +207,7 @@ static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 	IntReduce reduce = *(IntReduce*) args[0];
 	int start = *(int *) args[1];
 
-	*(ffi_arg*) ret = reducingFunc(self, reduce, start);
+	*(ffi_sarg*) ret = reducingFunc(self, reduce, start);
 }
 
 static int reducingFunc(JsArray self, IntReduce funcptr, int start) {
@@ -235,8 +245,10 @@ static void concatHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 
 static JsArray concattingFunc(JsArray self, JsArray other) {
 	resizeTo(self, self->data->len + other->data->len);
+
+	int len = other->length();
 	
-	for (int i = 0; i < other->length(); i++)
+	for (int i = 0; i < len; i++)
 		self->append(other->array[i]);
 
 	return self;
@@ -246,7 +258,7 @@ static void appendHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 	JsArray self = user_data;
 	int item = *(int *) args[0];
 
-	*(ffi_arg*) ret = appendingFunc(self, item);
+	*(ffi_sarg*) ret = appendingFunc(self, item);
 }
 
 static int appendingFunc(JsArray self, int item) {
@@ -282,7 +294,7 @@ static void printingFunc(JsArray self, char *preamble, char *separator, char *en
 static void lengthHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 
-	*(ffi_arg*) ret = self->data->len;
+	*(ffi_sarg*) ret = self->data->len;
 }
 
 static void cloneHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -292,5 +304,38 @@ static void cloneHandler(ffi_cif* cif, void* ret, void** args, void* user_data) 
 }
 
 static JsArray cloningFunc(JsArray self) {
-	return JsArrayNew()->concat(self);
+	JsArray new = JsArrayNew();
+	if (new == NULL) return NULL;
+	
+	return new->concat(self);
+}
+
+static void someHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
+	JsArray self = user_data;
+	IntTest test = *(IntTest *) args[0];
+
+	*(ffi_arg*) ret =  someFunc(self, test);
+}
+
+static bool someFunc(JsArray self, IntTest test) {
+	for (int i = 0; i < self->length(); i++) {
+		if (test(self->array[i])) return true;
+	}
+
+	return false;
+}
+
+static void everyHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
+	JsArray self = user_data;
+	IntTest test = *(IntTest *) args[0];
+
+	*(ffi_arg*) ret = everyFunc(self, test);
+}
+
+static bool everyFunc(JsArray self, IntTest test) {
+	for (int i = 0; i < self->length(); i++) {
+		if (!test(self->array[i])) return false;
+	}
+
+	return true;
 }
