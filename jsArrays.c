@@ -11,7 +11,7 @@ typedef enum {
 static Result setupMethod(JsArray self, int i);
 static void assignMethod(JsArray self, void *code, int i);
 static void resize(JsArray jsArray);
-
+static void resizeTo(JsArray jsArray, int size);
 static void sortHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
@@ -126,9 +126,15 @@ static void assignMethod(JsArray self, void *code, int i) {
 		default: fprintf(stderr, "Unassignable method"); exit(1); break;
 	}
 }
+static void resizeTo(JsArray self, int size) {
+	while (self->data->cap < size) {
+		self->data->cap *= 2;
+	}
+
+	resize(self);
+}
 
 static void resize(JsArray self) {
-	self->data->cap *= 2;
 	self->array = realloc(self->array, self->data->cap * sizeof(int));
 
 	if (self->array == NULL) {
@@ -228,6 +234,8 @@ static void concatHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 }
 
 static JsArray concattingFunc(JsArray self, JsArray other) {
+	resizeTo(self, self->data->len + other->data->len);
+	
 	for (int i = 0; i < other->length(); i++)
 		self->append(other->array[i]);
 
@@ -245,7 +253,7 @@ static int appendingFunc(JsArray self, int item) {
 	self->array[self->data->len++] = item;
 
 	if (self->length() >= self->data->cap) {
-		resize(self);
+		resizeTo(self, self->data->cap * 2);
 	}
 
 	return self->length();
@@ -284,11 +292,5 @@ static void cloneHandler(ffi_cif* cif, void* ret, void** args, void* user_data) 
 }
 
 static JsArray cloningFunc(JsArray self) {
-	JsArray new = JsArrayNew();
-
-	for (int i = 0; i < self->length(); i++) {
-		new->append(self->array[i]);
-	}
-
-	return new;
+	return JsArrayNew()->concat(self);
 }
