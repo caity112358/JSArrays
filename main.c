@@ -22,13 +22,23 @@ int main(void) {
 	jsArray->print("og array: ", " ", "\n");
 	printf("\n");
 
-	JsArray clone = jsArray->clone()->sort(decreasing)->map(toSquare);
+	JsArray clone = jsArray
+		->clone()
+		->sort(decreasing)
+		->map(toSquare);
 	clone->print("sorted and mapped clone: ", "~", "\n\n");
 
-	jsArray->sort(increasing)->map(toTimesThree)->print("Sorted and multiplied og: ", ".", "\n\n");
+	jsArray
+		->sort(increasing)
+		->map(toTimesThree)
+		->print("Sorted and multiplied og: ", ".", "\n\n");
 
-	jsArray->concat(clone)->print("concattenated arrays: ", "-", "\n\n");
+	printf("array reduced to sum: %d\n\n", jsArray->reduce(toSum, 0));
 	
+	jsArray
+		->concat(clone)
+		->print("concattenated arrays: ", "-", "\n\n");
+
 	JsArrayFree(clone);
 	JsArrayFree(jsArray);
 
