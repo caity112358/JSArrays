@@ -1,5 +1,8 @@
 #include "jsArrays.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
 JsArray scanJsArray(void);
 int readInt(void);
 void errorOut(char *message);
