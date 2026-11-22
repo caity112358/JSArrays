@@ -31,7 +31,7 @@ static void assignMethod(JsArray self, void *code, int i);
 static void resize(JsArray jsArray);
 static void resizeTo(JsArray jsArray, size_t size);
 
-static void errorOut(char *message);
+static void xerrorOut(char *message);
 
 static void sortHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
@@ -146,7 +146,7 @@ fail:
 }
 
 static bool validSize(size_t size) {
-	return size == 8 || size == 4 || size == 2 || size == 1;
+	return size == BYTES8 || size == BYTES4 || size == BYTES2 || size == BYTES1;
 }
 
 static Result setupMethod(JsArray self, int i) {
@@ -170,19 +170,19 @@ static Result setupMethod(JsArray self, int i) {
 
 static void assignMethod(JsArray self, void *code, int i) {
 	switch (i) {
-		case 0: self->sort = (SortFunc) code; break;
-		case 1: self->reduce = (ReduceFunc) code; break;
-		case 2: self->map = (MapFunc) code; break;
-		case 3: self->concat = (ConcatFunc) code; break;
-		case 4: self->append = (AppendFunc) code; break;
-		case 5: self->print = (PrintFunc) code; break;
-		case 6: self->length = (LengthFunc) code; break;
-		case 7: self->clone = (CloneFunc) code; break;
-		case 8: self->some = (SomeFunc) code; break;
-		case 9: self->every = (EveryFunc) code; break;
-		case 10: self->get = (GetFunc) code; break;
-		case 11: self->set = (SetFunc) code; break;
-		default: errorOut("Unassignable method");
+		case 0: self->sort	= (SortFunc)	code; break;
+		case 1: self->reduce	= (ReduceFunc)	code; break;
+		case 2: self->map	= (MapFunc)	code; break;
+		case 3: self->concat	= (ConcatFunc)	code; break;
+		case 4: self->append	= (AppendFunc)	code; break;
+		case 5: self->print	= (PrintFunc)	code; break;
+		case 6: self->length	= (LengthFunc)	code; break;
+		case 7: self->clone	= (CloneFunc)	code; break;
+		case 8: self->some	= (SomeFunc)	code; break;
+		case 9: self->every	= (EveryFunc)	code; break;
+		case 10: self->get	= (GetFunc)	code; break;
+		case 11: self->set	= (SetFunc)	code; break;
+		default: xerrorOut("Unassignable method");
 	}
 }
 
@@ -224,9 +224,9 @@ free_end:
 	return;
 }
 
-static void errorOut(char *message) {
+static void xerrorOut(char *message) {
 	fprintf(stderr, "%s\n", message);
-	exit(1);
+	abort();
 }
 
 static void sortHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -253,18 +253,13 @@ static JsArray sortingFunc(JsArray self, Comp funcptr) {
 	return self;
 }
 
-typedef bool (*Comp64)(int64_t a, int64_t b);
-typedef bool (*Comp32)(int32_t a, int32_t b);
-typedef bool (*Comp16)(int16_t a, int16_t b);
-typedef bool (*Comp8)(int8_t a, int8_t b);
-
 static bool sortCompare(JsArray self, void *funcptr, void *a, void *b) {
 	switch (self->data->elementSize) {
 		case BYTES8: return ((Comp64) funcptr)((int64_t)(intptr_t) a, (int64_t)(intptr_t) b);
 		case BYTES4: return ((Comp32) funcptr)((int32_t)(intptr_t) a, (int32_t)(intptr_t) b);
 		case BYTES2: return ((Comp16) funcptr)((int16_t)(intptr_t) a, (int16_t)(intptr_t) b);
 		case BYTES1: return ((Comp8) funcptr)((int8_t)(intptr_t) a, (int8_t)(intptr_t) b);
-		default: errorOut("Failed comparison");
+		default: xerrorOut("Failed comparison");
 	}
 }
 
@@ -285,18 +280,13 @@ static int reducingFunc(JsArray self, Reduce funcptr, int start) {
 	return accumulator;
 }
 
-typedef int (*Reduce64)(int accum, int64_t item);
-typedef int (*Reduce32)(int accum, int32_t item);
-typedef int (*Reduce16)(int accum, int16_t item);
-typedef int (*Reduce8)(int accum, int8_t item);
-
 static int reduceElement(JsArray self, void *funcptr, int accum, void *item) {
 	switch (self->data->elementSize) {
 		case BYTES8: return ((Reduce64) funcptr)(accum, (int64_t)(intptr_t) item);
 		case BYTES4: return ((Reduce32) funcptr)(accum, (int32_t)(intptr_t) item);
 		case BYTES2: return ((Reduce16) funcptr)(accum, (int16_t)(intptr_t) item);
-		case BYTES1: return ((Reduce8) funcptr)(accum, (int8_t)(intptr_t) item);
-		default: errorOut("Failed reduction");
+		case BYTES1: return ((Reduce8)  funcptr)(accum, (int8_t)(intptr_t)  item);
+		default: xerrorOut("Failed reduction");
 	}
 }
 
@@ -315,18 +305,16 @@ static JsArray mappingFunc(JsArray self, Map funcptr) {
 	return self;
 }
 
-typedef int64_t (*Map64)(int64_t item);
-typedef int32_t (*Map32)(int32_t item);
-typedef int16_t (*Map16)(int16_t item);
-typedef int8_t  (*Map8)(int8_t item);
-
 static void *mapElement(JsArray self, Map funcptr, void *item) {
 	switch (self->data->elementSize) {
 		case BYTES8: return (void *)(intptr_t) ((Map64) funcptr)((int64_t)(intptr_t) item);
 		case BYTES4: return (void *)(intptr_t) ((Map32) funcptr)((int32_t)(intptr_t) item);
-		case BYTES2: return (void *)(intptr_t) ((Map16) funcptr)((int16_t)(intptr_t) item);
+			typedef bool (*Test64)(int64_t item);
+			typedef bool (*Test32)(int32_t item);
+			typedef bool (*Test16)(int16_t item);
+			typedef bool (*Test8)(int8_t item);	case BYTES2: return (void *)(intptr_t) ((Map16) funcptr)((int16_t)(intptr_t) item);
 		case BYTES1: return (void *)(intptr_t) ((Map8) funcptr)((int8_t)(intptr_t) item);
-		default: errorOut("Failed map");
+		default: xerrorOut("Failed map");
 	}
 }
 
@@ -391,7 +379,7 @@ static void printElement(JsArray self, void *item) {
 		case BYTES4: printf("%d", (int32_t)(intptr_t) item); break;
 		case BYTES2: printf("%d", (int16_t)(intptr_t) item); break;
 		case BYTES1: printf("%d", (int8_t)(intptr_t) item); break;
-		default: errorOut("Failed print");
+		default: xerrorOut("Failed print");
 	}
 }
 
@@ -444,18 +432,13 @@ static bool everyFunc(JsArray self, Test test) {
 	return true;
 }
 
-typedef bool (*Test64)(int64_t item);
-typedef bool (*Test32)(int32_t item);
-typedef bool (*Test16)(int16_t item);
-typedef bool (*Test8)(int8_t item);
-
 static bool elementTest(JsArray self, Test funcptr, void *item) {
 	switch (self->data->elementSize) {
 		case BYTES8: return ((Test64) funcptr)((int64_t)(intptr_t) item);
 		case BYTES4: return ((Test32) funcptr)((int32_t)(intptr_t) item);
 		case BYTES2: return ((Test16) funcptr)((int16_t)(intptr_t) item);
 		case BYTES1: return ((Test8) funcptr)((int8_t)(intptr_t) item);
-		default: errorOut("Failed test");
+		default: xerrorOut("Failed test");
 	}
 }
 
@@ -472,7 +455,7 @@ static void *gettingFunc(JsArray self, uint index) {
 		case BYTES4: return (void*)(intptr_t) self->data->arr[index / 2].bits32[index % 2];
 		case BYTES2: return (void*)(intptr_t) self->data->arr[index / 4].bits16[index % 4];
 		case BYTES1: return (void*)(intptr_t) self->data->arr[index / 8].bits8[index % 8];
-		default: errorOut("Failed get");
+		default: xerrorOut("Failed get");
 	}
 }
 
@@ -490,6 +473,6 @@ static void settingFunc(JsArray self, uint index, void *item) {
 		case BYTES4: self->data->arr[index / 2].bits32[index % 2] = (int32_t)(intptr_t) item; break;
 		case BYTES2: self->data->arr[index / 4].bits16[index % 4] = (int16_t)(intptr_t) item; break;
 		case BYTES1: self->data->arr[index / 8].bits8[index % 8] = (int8_t)(intptr_t) item; break;
-		default: errorOut("Failed set");
+		default: xerrorOut("Failed set");
 	}
 }
