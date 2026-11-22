@@ -128,7 +128,7 @@ JsArray JsArrayNew(size_t size) {
 	self->data->arr = calloc(1, sizeof(Element));
 	if (!self->data->arr) goto fail;
 	self->data->len = 0;
-	self->data->cap = 1;
+	self->data->cap = 8 / size;
 	self->data->elementSize = size;
 
 	self->data->closures = calloc(NUM_METHODS, sizeof(ffi_closure *));
@@ -201,7 +201,7 @@ static void resize(JsArray self) {
 
 	if (self->data->arr == NULL) {
 		fprintf(stderr, "Bad realloc");
-		exit(1);
+		abort();
 	}
 }
 
@@ -284,10 +284,10 @@ static int reducingFunc(JsArray self, Reduce funcptr, int start) {
 
 static int reduceElement(JsArray self, void *funcptr, int accum, void *item) {
 	switch (self->data->elementSize) {
-		case BYTES8: return (int)(intptr_t) ((Reduce64) funcptr)(accum, (int64_t)(intptr_t) item);
-		case BYTES4: return (int)(intptr_t) ((Reduce32) funcptr)(accum, (int32_t)(intptr_t) item);
-		case BYTES2: return (int)(intptr_t) ((Reduce16) funcptr)(accum, (int16_t)(intptr_t) item);
-		case BYTES1: return (int)(intptr_t) ((Reduce8)  funcptr)(accum, (int8_t)(intptr_t)  item);
+		case BYTES8: return ((Reduce64) funcptr)(accum, (int64_t)(intptr_t) item);
+		case BYTES4: return ((Reduce32) funcptr)(accum, (int32_t)(intptr_t) item);
+		case BYTES2: return ((Reduce16) funcptr)(accum, (int16_t)(intptr_t) item);
+		case BYTES1: return ((Reduce8)  funcptr)(accum, (int8_t)(intptr_t)  item);
 		default: xerrorOut("Failed reduction");
 	}
 	
