@@ -1,5 +1,6 @@
 #include "jsArrays.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -51,11 +52,11 @@ JsArray scanJsArray(void) {
 	if (scanf("%d", &arrayLength) != 1)
 		errorOut("Failed to scan");
 
-	JsArray jsArray = JsArrayNew();
+	JsArray jsArray = JsArrayNew(sizeof(int));
 
 	printf("Enter %d integers: ", arrayLength);
 	for (int i = 0; i < arrayLength; i++)
-		jsArray->append(readInt());
+		jsArray->append((void *)(intptr_t) readInt());
 	printf("\n");
 
 	return jsArray;

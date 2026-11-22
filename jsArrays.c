@@ -7,10 +7,10 @@
 #include <stdint.h>
 
 typedef enum {
-	BYTES8 = 64,
-	BYTES4 = 32,
-	BYTES2 = 16,
-	BYTE1 = 8
+	BYTES8 = 8,
+	BYTES4 = 4,
+	BYTES2 = 2,
+	BYTES1 = 1
 } ElementSize;
 
 typedef union {
@@ -43,15 +43,28 @@ static void everyHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void getHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void setHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 
-static JsArray sortingFunc(JsArray self, IntComp funcptr);
-static int reducingFunc(JsArray self, IntReduce funcptr, int start);
-static JsArray mappingFunc(JsArray self, IntMap funcptr);
+static JsArray sortingFunc(JsArray self, Comp funcptr);
+static bool sortCompare(JsArray self, Comp funcptr, void *a, void *b);
+
+static int reducingFunc(JsArray self, Reduce funcptr, int start);
+static int reduceElement(JsArray self, Reduce funcptr, int accum, void *item);
+
+static JsArray mappingFunc(JsArray self, Map funcptr);
+static void *mapElement(JsArray self, Map funcptr, void *item);
+
 static JsArray concattingFunc(JsArray self, JsArray other);
-static int appendingFunc(JsArray self, int item);
+
+static int appendingFunc(JsArray self, void *item);
+
 static void printingFunc(JsArray self, char *preamble, char *separator, char *end);
+static void printElement(JsArray self, void *item);
+
 static JsArray cloningFunc(JsArray self);
-static bool someFunc(JsArray self, IntTest test);
-static bool everyFunc(JsArray self, IntTest test);
+
+static bool someFunc(JsArray self, Test test);
+static bool everyFunc(JsArray self, Test test);
+static bool elementTest(JsArray self, Test funcptr, void *item);
+
 static void *gettingFunc(JsArray self, uint index);
 static void settingFunc(JsArray self, uint index, void *item);
 
@@ -96,8 +109,8 @@ static FuncData funcData[NUM_METHODS] = {
 	{	.nargs = 0,	.rtype = &ffi_type_pointer,	.atypes = NULL,			.handler = cloneHandler },
 	{	.nargs = 1,	.rtype = &ffi_type_uint8,	.atypes = someArgTypes, 	.handler = someHandler },
 	{	.nargs = 1,	.rtype = &ffi_type_uint8,	.atypes = everyArgTypes, 	.handler = everyHandler },
-	{	.nargs = 1	.rtype = &ffi_type_pointer,	.atypes = getArgTypes,		.handler = getHandler },
-	{	.nargs = 2	.rtype = &ffi_type_void,	.atypes = setArgTypes,		.handler = setHandler }
+	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = getArgTypes,		.handler = getHandler },
+	{	.nargs = 2,	.rtype = &ffi_type_void,	.atypes = setArgTypes,		.handler = setHandler }
 };
 
 JsArray JsArrayNew(size_t size) {
@@ -106,7 +119,7 @@ JsArray JsArrayNew(size_t size) {
 
 	self->data = calloc(1, sizeof(struct jsArrayData));
 	if (!self->data) goto fail;
-	
+
 	self->data->arr = calloc(1, size);
 	if (!self->data->arr) goto fail;
 	self->data->len = 0;
@@ -142,7 +155,7 @@ static Result setupMethod(JsArray self, int i) {
 		return FAILURE;
 
 	assignMethod(self, code, i);
-	
+
 	return SUCCESS;
 }
 
@@ -159,14 +172,14 @@ static void assignMethod(JsArray self, void *code, int i) {
 		case 8: self->some = (SomeFunc) code; break;
 		case 9: self->every = (EveryFunc) code; break;
 		case 10: self->get = (GetFunc) code; break;
-		case 11: self->set = (GetFunc) code; break;
+		case 11: self->set = (SetFunc) code; break;
 		default: fprintf(stderr, "Unassignable method"); exit(1); break;
 	}
 }
 
 static void resizeTo(JsArray self, int size) {
 	if (self->data->cap >= size) return;
-	
+
 	while (self->data->cap < size) {
 		self->data->cap *= 2;
 	}
@@ -174,7 +187,7 @@ static void resizeTo(JsArray self, int size) {
 	resize(self);
 }
 
-static void resize(JsArray self) {	
+static void resize(JsArray self) {
 	self->data->arr = realloc(self->data->arr, self->data->cap * self->data->elementSize);
 
 	if (self->data->arr == NULL) {
@@ -204,20 +217,20 @@ free_end:
 
 static void sortHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
-	IntComp cmp = *(IntComp*)args[0];
+	Comp cmp = *(Comp*)args[0];
 
 	*(JsArray*) ret = sortingFunc(self, cmp);
 }
 
-static JsArray sortingFunc(JsArray self, IntComp funcptr) {
+static JsArray sortingFunc(JsArray self, Comp funcptr) {
 	for (int i = 0; i < self->length() - 1; i++) {
 		int min = i;
 
 		for (int j = i + 1; j < self->length(); j++)
-			if (funcptr(self->get(j), self->get(min))) min = j;
+			if (sortCompare(self, funcptr, self->get(j), self->get(min))) min = j;
 
 		if (min != i) {
-			int temp = self->get(min);
+			void *temp = self->get(min);
 			self->set(min, self->get(i));
 			self->set(i, temp);
 		}
@@ -226,38 +239,78 @@ static JsArray sortingFunc(JsArray self, IntComp funcptr) {
 	return self;
 }
 
+typedef bool (*Comp64)(uint64_t a, uint64_t b);
+typedef bool (*Comp32)(uint32_t a, uint32_t b);
+typedef bool (*Comp16)(uint16_t a, uint16_t b);
+typedef bool (*Comp8)(uint8_t a, uint8_t b);
+
+static bool sortCompare(JsArray self, void *funcptr, void *a, void *b) {
+	switch (self->data->elementSize) {
+		case BYTES8: return ((Comp64) funcptr)((uint64_t)(uintptr_t) a, (uint64_t)(uintptr_t) b);
+		case BYTES4: return ((Comp32) funcptr)((uint32_t)(uintptr_t) a, (uint32_t)(uintptr_t) b);
+		case BYTES2: return ((Comp16) funcptr)((uint16_t)(uintptr_t) a, (uint16_t)(uintptr_t) b);
+		case BYTES1: return ((Comp8) funcptr)((uint8_t)(uintptr_t) a, (uint8_t)(uintptr_t) b);
+	}
+}
+
 static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
-	IntReduce reduce = *(IntReduce*) args[0];
+	Reduce reduce = *(Reduce*) args[0];
 	int start = *(int *) args[1];
 
 	*(ffi_sarg*) ret = reducingFunc(self, reduce, start);
 }
 
-static int reducingFunc(JsArray self, IntReduce funcptr, int start) {
-	int* cArray = self->data->arr;
-
+static int reducingFunc(JsArray self, Reduce funcptr, int start) {
 	int accumulator = start;
 
 	for (int i = 0; i < self->length(); i++)
-		accumulator = funcptr(accumulator, cArray[i]);
+		accumulator = reduceElement(self, funcptr, accumulator, self->get(i));
 
 	return accumulator;
 }
 
+typedef int (*Reduce64)(int accum, uint64_t item);
+typedef int (*Reduce32)(int accum, uint32_t item);
+typedef int (*Reduce16)(int accum, uint16_t item);
+typedef int (*Reduce8)(int accum, uint8_t item);
+
+static int reduceElement(JsArray self, void *funcptr, int accum, void *item) {
+	switch (self->data->elementSize) {
+		case BYTES8: return ((Reduce64) funcptr)(accum, (uint64_t)(uintptr_t) item);
+		case BYTES4: return ((Reduce32) funcptr)(accum, (uint32_t)(uintptr_t) item);
+		case BYTES2: return ((Reduce16) funcptr)(accum, (uint16_t)(uintptr_t) item);
+		case BYTES1: return ((Reduce8) funcptr)(accum, (uint8_t)(uintptr_t) item);
+	}
+}
+
 static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
-	IntMap map = *(IntMap *) args[0];
+	Map map = *(Map *) args[0];
 
 	*(JsArray*) ret = mappingFunc(self, map);
 }
 
-static JsArray mappingFunc(JsArray self, IntMap funcptr) {
+static JsArray mappingFunc(JsArray self, Map funcptr) {
 	for (int i = 0; i < self->length(); i++) {
-		self->set(i, funcptr(self->get(i)));
+		self->set(i, mapElement(self, funcptr, self->get(i)));
 	}
 
 	return self;
+}
+
+typedef uint64_t (*Map64)(uint64_t item);
+typedef uint32_t (*Map32)(uint32_t item);
+typedef uint16_t (*Map16)(uint16_t item);
+typedef uint8_t  (*Map8)(uint8_t item);
+
+static void *mapElement(JsArray self, Map funcptr, void *item) {
+	switch (self->data->elementSize) {
+		case BYTES8: return (void *)(uintptr_t) ((Map64) funcptr)((uint64_t)(uintptr_t) item);
+		case BYTES4: return (void *)(uintptr_t) ((Map32) funcptr)((uint32_t)(uintptr_t) item);
+		case BYTES2: return (void *)(uintptr_t) ((Map16) funcptr)((uint16_t)(uintptr_t) item);
+		case BYTES1: return (void *)(uintptr_t) ((Map8) funcptr)((uint8_t)(uintptr_t) item);
+	}
 }
 
 static void concatHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -271,7 +324,7 @@ static JsArray concattingFunc(JsArray self, JsArray other) {
 	resizeTo(self, self->data->len + other->data->len);
 
 	int len = other->length();
-	
+
 	for (int i = 0; i < len; i++)
 		self->append(other->get(i));
 
@@ -280,12 +333,12 @@ static JsArray concattingFunc(JsArray self, JsArray other) {
 
 static void appendHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
-	int item = *(int *) args[0];
+	void *item = *(void **) args[0];
 
 	*(ffi_sarg*) ret = appendingFunc(self, item);
 }
 
-static int appendingFunc(JsArray self, int item) {
+static int appendingFunc(JsArray self, void *item) {
 	self->set(self->data->len++, item);
 
 	if (self->length() >= self->data->cap) {
@@ -300,7 +353,7 @@ static void printHandler(ffi_cif* cif, void* ret, void** args, void* user_data) 
 	char *preamble = *(char **) args[0];
 	char *separator = *(char **) args[1];
 	char *end = *(char **) args[2];
-	
+
 	printingFunc(self, preamble, separator, end);
 }
 
@@ -309,10 +362,19 @@ static void printingFunc(JsArray self, char *preamble, char *separator, char *en
 
 	for (int i = 0; i < self->length(); i++) {
 		if (i != 0) printf("%s", separator);
-		printf("%d", self->get(i));
+		printElement(self, self->get(i));
 	}
 
 	printf("%s", end);
+}
+
+static void printElement(JsArray self, void *item) {
+	switch (self->data->elementSize) {
+		case BYTES8: printf("%ld", (int64_t)(intptr_t) item); break;
+		case BYTES4: printf("%d", (int32_t)(intptr_t) item); break;
+		case BYTES2: printf("%d", (int16_t)(intptr_t) item); break;
+		case BYTES1: printf("%uc", (int8_t)(intptr_t) item); break;
+	}
 }
 
 static void lengthHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -330,20 +392,20 @@ static void cloneHandler(ffi_cif* cif, void* ret, void** args, void* user_data) 
 static JsArray cloningFunc(JsArray self) {
 	JsArray new = JsArrayNew(self->data->elementSize);
 	if (new == NULL) return NULL;
-	
+
 	return new->concat(self);
 }
 
 static void someHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
-	IntTest test = *(IntTest *) args[0];
+	Test test = *(Test *) args[0];
 
 	*(ffi_arg*) ret =  someFunc(self, test);
 }
 
-static bool someFunc(JsArray self, IntTest test) {
+static bool someFunc(JsArray self, Test test) {
 	for (int i = 0; i < self->length(); i++) {
-		if (test(self->get(i))) return true;
+		if (elementTest(self, test, self->get(i))) return true;
 	}
 
 	return false;
@@ -351,17 +413,31 @@ static bool someFunc(JsArray self, IntTest test) {
 
 static void everyHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
-	IntTest test = *(IntTest *) args[0];
+	Test test = *(Test *) args[0];
 
 	*(ffi_arg*) ret = everyFunc(self, test);
 }
 
-static bool everyFunc(JsArray self, IntTest test) {
+static bool everyFunc(JsArray self, Test test) {
 	for (int i = 0; i < self->length(); i++) {
-		if (!test(self->get(i))) return false;
+		if (!elementTest(self, test, self->get(i))) return false;
 	}
 
 	return true;
+}
+
+typedef bool (*Test64)(int64_t item);
+typedef bool (*Test32)(int32_t item);
+typedef bool (*Test16)(int16_t item);
+typedef bool (*Test8)(int8_t item);
+
+static bool elementTest(JsArray self, Test funcptr, void *item) {
+	switch (self->data->elementSize) {
+		case BYTES8: ((Test64) funcptr)((int64_t)(intptr_t) item);
+		case BYTES4: ((Test32) funcptr)((int32_t)(intptr_t) item);
+		case BYTES2: ((Test16) funcptr)((int16_t)(intptr_t) item);
+		case BYTES1: ((Test8) funcptr)((int8_t)(intptr_t) item);
+	}
 }
 
 static void getHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -376,7 +452,7 @@ static void *gettingFunc(JsArray self, uint index) {
 		case BYTES8: return (void*)(uintptr_t) self->data->arr[index].bits64;
 		case BYTES4: return (void*)(uintptr_t) self->data->arr[index / 2].bits32[index % 2];
 		case BYTES2: return (void*)(uintptr_t) self->data->arr[index / 4].bits16[index % 4];
-		case BYTE1: return (void*)(uintptr_t) self->data->arr[index / 8].bits8[index % 8];
+		case BYTES1: return (void*)(uintptr_t) self->data->arr[index / 8].bits8[index % 8];
 	}
 }
 
@@ -384,7 +460,7 @@ static void setHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	uint index = *(uint *) args[0];
 	void *item = *(void **) args[1];
-	
+
 	*(void **) ret = gettingFunc(self, index);
 }
 
@@ -393,6 +469,6 @@ static void settingFunc(JsArray self, uint index, void *item) {
 		case BYTES8: self->data->arr[index].bits64 = (uint64_t)(uintptr_t) item; break;
 		case BYTES4: self->data->arr[index / 2].bits32[index % 2] = (uint32_t)(uintptr_t) item; break;
 		case BYTES2: self->data->arr[index / 4].bits16[index % 4] = (uint16_t)(uintptr_t) item; break;
-		case BYTE1: self->data->arr[index / 8].bits8[index % 8] = (uint8_t)(uintptr_t) item; break;
+		case BYTES1: self->data->arr[index / 8].bits8[index % 8] = (uint8_t)(uintptr_t) item; break;
 	}
 }

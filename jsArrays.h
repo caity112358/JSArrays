@@ -7,29 +7,32 @@
 typedef struct jsArrayWrapper *JsArray;
 
 // Returns true if a comes before b
-typedef bool (*IntComp)(int a, int b);
+// Comp(a, b) -> bool
+typedef void *Comp;
 
 // Returns the value that becomes the accum arg
 // on the next call
-typedef int (*IntReduce)(int accum, int curr);
+// Reduce(accum, curr) -> accum
+typedef void *Reduce;
 
 // Returns the current element mapped to another
 // integer
-typedef int (*IntMap)(int curr);
+// Map(curr) -> new
+typedef void *Map;
 
 // Returns true if the current element passes the test
-typedef bool (*IntTest)(int curr);
+typedef void *Test;
 
-typedef JsArray (*SortFunc)(IntComp funcptr);
-typedef int (*ReduceFunc)(IntReduce funcptr, int start);
-typedef JsArray (*MapFunc)(IntMap funcptr);
+typedef JsArray (*SortFunc)(Comp funcptr);
+typedef int (*ReduceFunc)(Reduce funcptr, int start);
+typedef JsArray (*MapFunc)(Map funcptr);
 typedef JsArray (*ConcatFunc)(JsArray other);
-typedef int (*AppendFunc)(int item);
+typedef int (*AppendFunc)(void *item);
 typedef void (*PrintFunc)(char *preamble, char *separator, char *end);
 typedef int (*LengthFunc)(void);
 typedef JsArray (*CloneFunc)(void);
-typedef bool (*SomeFunc)(IntTest test);
-typedef bool (*EveryFunc)(IntTest test);
+typedef bool (*SomeFunc)(Test test);
+typedef bool (*EveryFunc)(Test test);
 typedef void *(*GetFunc)(uint index);
 typedef void (*SetFunc)(uint index, void *item);
 
