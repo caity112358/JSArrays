@@ -1,5 +1,8 @@
 #pragma once
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <sys/types.h>
 
 typedef struct jsArrayWrapper *JsArray;
 
@@ -27,13 +30,12 @@ typedef int (*LengthFunc)(void);
 typedef JsArray (*CloneFunc)(void);
 typedef bool (*SomeFunc)(IntTest test);
 typedef bool (*EveryFunc)(IntTest test);
+typedef void *(*GetFunc)(uint index);
+typedef void (*SetFunc)(uint index, void *item);
 
 typedef struct jsArrayData *JsArrayData;
 
 struct jsArrayWrapper {
-	// Read only array. Location may change after append() or concat() calls
-	int* array;
-
 	// Sorts the array in place
 	SortFunc sort;
 
@@ -64,9 +66,12 @@ struct jsArrayWrapper {
 	// Returns true if the given test passes on every element
 	EveryFunc every;
 
+	GetFunc get;
+	SetFunc set;
+	
 	// Pointer to extra data defined in the .c file, essentiall private vars
 	JsArrayData data;
 };
 
-JsArray JsArrayNew(void);
+JsArray JsArrayNew(size_t size);
 void JsArrayFree(JsArray jsArray);
