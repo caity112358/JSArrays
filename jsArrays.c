@@ -66,7 +66,7 @@ static JsArray cloningFunc(JsArray self);
 
 static bool someFunc(JsArray self, Test test);
 static bool everyFunc(JsArray self, Test test);
-static bool elementTest(JsArray self, Test funcptr, void *item);
+static bool testElement(JsArray self, Test funcptr, void *item);
 
 static void *gettingFunc(JsArray self, uint index);
 static void settingFunc(JsArray self, uint index, void *item);
@@ -261,6 +261,8 @@ static bool sortCompare(JsArray self, void *funcptr, void *a, void *b) {
 		case BYTES1: return ((Comp8) funcptr)((int8_t)(intptr_t) a, (int8_t)(intptr_t) b);
 		default: xerrorOut("Failed comparison");
 	}
+	
+	return NULL;
 }
 
 static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -282,12 +284,14 @@ static int reducingFunc(JsArray self, Reduce funcptr, int start) {
 
 static int reduceElement(JsArray self, void *funcptr, int accum, void *item) {
 	switch (self->data->elementSize) {
-		case BYTES8: return ((Reduce64) funcptr)(accum, (int64_t)(intptr_t) item);
-		case BYTES4: return ((Reduce32) funcptr)(accum, (int32_t)(intptr_t) item);
-		case BYTES2: return ((Reduce16) funcptr)(accum, (int16_t)(intptr_t) item);
-		case BYTES1: return ((Reduce8)  funcptr)(accum, (int8_t)(intptr_t)  item);
+		case BYTES8: return (int)(intptr_t) ((Reduce64) funcptr)(accum, (int64_t)(intptr_t) item);
+		case BYTES4: return (int)(intptr_t) ((Reduce32) funcptr)(accum, (int32_t)(intptr_t) item);
+		case BYTES2: return (int)(intptr_t) ((Reduce16) funcptr)(accum, (int16_t)(intptr_t) item);
+		case BYTES1: return (int)(intptr_t) ((Reduce8)  funcptr)(accum, (int8_t)(intptr_t)  item);
 		default: xerrorOut("Failed reduction");
 	}
+	
+	return 0;
 }
 
 static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -309,13 +313,12 @@ static void *mapElement(JsArray self, Map funcptr, void *item) {
 	switch (self->data->elementSize) {
 		case BYTES8: return (void *)(intptr_t) ((Map64) funcptr)((int64_t)(intptr_t) item);
 		case BYTES4: return (void *)(intptr_t) ((Map32) funcptr)((int32_t)(intptr_t) item);
-			typedef bool (*Test64)(int64_t item);
-			typedef bool (*Test32)(int32_t item);
-			typedef bool (*Test16)(int16_t item);
-			typedef bool (*Test8)(int8_t item);	case BYTES2: return (void *)(intptr_t) ((Map16) funcptr)((int16_t)(intptr_t) item);
+		case BYTES2: return (void *)(intptr_t) ((Map16) funcptr)((int16_t)(intptr_t) item);
 		case BYTES1: return (void *)(intptr_t) ((Map8) funcptr)((int8_t)(intptr_t) item);
 		default: xerrorOut("Failed map");
 	}
+
+	return NULL;
 }
 
 static void concatHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -411,7 +414,7 @@ static void someHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 
 static bool someFunc(JsArray self, Test test) {
 	for (int i = 0; i < self->length(); i++) {
-		if (elementTest(self, test, self->get(i))) return true;
+		if (testElement(self, test, self->get(i))) return true;
 	}
 
 	return false;
@@ -426,13 +429,13 @@ static void everyHandler(ffi_cif* cif, void* ret, void** args, void* user_data) 
 
 static bool everyFunc(JsArray self, Test test) {
 	for (int i = 0; i < self->length(); i++) {
-		if (!elementTest(self, test, self->get(i))) return false;
+		if (!testElement(self, test, self->get(i))) return false;
 	}
 
 	return true;
 }
 
-static bool elementTest(JsArray self, Test funcptr, void *item) {
+static bool testElement(JsArray self, Test funcptr, void *item) {
 	switch (self->data->elementSize) {
 		case BYTES8: return ((Test64) funcptr)((int64_t)(intptr_t) item);
 		case BYTES4: return ((Test32) funcptr)((int32_t)(intptr_t) item);
@@ -440,6 +443,8 @@ static bool elementTest(JsArray self, Test funcptr, void *item) {
 		case BYTES1: return ((Test8) funcptr)((int8_t)(intptr_t) item);
 		default: xerrorOut("Failed test");
 	}
+	
+	return NULL;
 }
 
 static void getHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -457,6 +462,8 @@ static void *gettingFunc(JsArray self, uint index) {
 		case BYTES1: return (void*)(intptr_t) self->data->arr[index / 8].bits8[index % 8];
 		default: xerrorOut("Failed get");
 	}
+
+	return NULL;
 }
 
 static void setHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
