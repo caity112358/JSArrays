@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Werror -g
 LDLIBS = -lffi
-SRC = jsArrays.c main.c
+SRC = jsArrays.c main.c tests.c
 TARGET = jsArrayTest
 
 all:
