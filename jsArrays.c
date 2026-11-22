@@ -433,10 +433,10 @@ typedef bool (*Test8)(int8_t item);
 
 static bool elementTest(JsArray self, Test funcptr, void *item) {
 	switch (self->data->elementSize) {
-		case BYTES8: ((Test64) funcptr)((int64_t)(intptr_t) item);
-		case BYTES4: ((Test32) funcptr)((int32_t)(intptr_t) item);
-		case BYTES2: ((Test16) funcptr)((int16_t)(intptr_t) item);
-		case BYTES1: ((Test8) funcptr)((int8_t)(intptr_t) item);
+		case BYTES8: return ((Test64) funcptr)((int64_t)(intptr_t) item);
+		case BYTES4: return ((Test32) funcptr)((int32_t)(intptr_t) item);
+		case BYTES2: return ((Test16) funcptr)((int16_t)(intptr_t) item);
+		case BYTES1: return ((Test8) funcptr)((int8_t)(intptr_t) item);
 	}
 }
 
