@@ -60,7 +60,7 @@ struct jsArrayWrapper {
 	// Returns the "private" length variable
 	LengthFunc length;
 
-	// Returns a copy of this JsArray 
+	// Returns a copy of this JsArray
 	CloneFunc clone;
 
 	// Returns true if the given test passes on any element
@@ -71,7 +71,7 @@ struct jsArrayWrapper {
 
 	GetFunc get;
 	SetFunc set;
-	
+
 	// Pointer to extra data defined in the .c file, essentiall private vars
 	JsArrayData data;
 };
