@@ -1,0 +1,16 @@
+#include "jsArrays.h"
+#include <criterion/criterion.h>
+#include <criterion/parameterized.h>
+
+#define VALID_SIZE_TEST(suite_name, test_name) \
+ParameterizedTestParameters(suite_name, test_name) { \
+	return cr_make_param_array(size_t, validSizes, sizeof(validSizes) / sizeof(validSizes[0])); \
+} \
+ParameterizedTest(size_t *size, suite_name, test_name)
+
+static size_t validSizes[] = {
+	sizeof(int64_t),
+	sizeof(int32_t),
+	sizeof(int16_t),
+	sizeof(int8_t)
+};
