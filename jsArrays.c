@@ -251,10 +251,10 @@ static void sortHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 }
 
 static JsArray sortingFunc(JsArray self, Comp funcptr) {
-	for (int i = 0; i < self->length() - 1; i++) {
+	for (int i = 0; i < self->data->len - 1; i++) {
 		int min = i;
 
-		for (int j = i + 1; j < self->length(); j++)
+		for (int j = i + 1; j < self->data->len; j++)
 			if (sortCompare(self, funcptr, self->get(j), self->get(min))) min = j;
 
 		if (min != i) {
@@ -290,7 +290,7 @@ static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 static int reducingFunc(JsArray self, Reduce funcptr, int start) {
 	int accumulator = start;
 
-	for (int i = 0; i < self->length(); i++)
+	for (int i = 0; i < self->data->len; i++)
 		accumulator = reduceElement(self, funcptr, accumulator, self->get(i));
 
 	return accumulator;
@@ -316,7 +316,7 @@ static void mapHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 }
 
 static JsArray mappingFunc(JsArray self, Map funcptr) {
-	for (int i = 0; i < self->length(); i++) {
+	for (int i = 0; i < self->data->len; i++) {
 		self->set(i, mapElement(self, funcptr, self->get(i)));
 	}
 
@@ -369,7 +369,7 @@ static int appendingFunc(JsArray self, Item item) {
 	
 	self->set(self->data->len++, item);
 
-	return self->length();
+	return self->data->len;
 }
 
 static void printHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -384,7 +384,7 @@ static void printHandler(ffi_cif* cif, void* ret, void** args, void* user_data) 
 static void printingFunc(JsArray self, char *preamble, char *separator, char *end) {
 	printf("%s", preamble);
 
-	for (int i = 0; i < self->length(); i++) {
+	for (int i = 0; i < self->data->len; i++) {
 		if (i != 0) printf("%s", separator);
 		printElement(self, self->get(i));
 	}
@@ -429,7 +429,7 @@ static void someHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 }
 
 static bool someFunc(JsArray self, Test test) {
-	for (int i = 0; i < self->length(); i++) {
+	for (int i = 0; i < self->data->len; i++) {
 		if (testElement(self, test, self->get(i))) return true;
 	}
 
@@ -444,7 +444,7 @@ static void everyHandler(ffi_cif* cif, void* ret, void** args, void* user_data) 
 }
 
 static bool everyFunc(JsArray self, Test test) {
-	for (int i = 0; i < self->length(); i++) {
+	for (int i = 0; i < self->data->len; i++) {
 		if (!testElement(self, test, self->get(i))) return false;
 	}
 
