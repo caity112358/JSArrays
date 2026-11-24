@@ -1,7 +1,7 @@
 #include <criterion/criterion.h>
 #include <criterion/parameterized.h>
 
-#define VALID_SIZE_TEST(suite_name, test_name) \
+#define validSizeTest(suite_name, test_name) \
 ParameterizedTestParameters(suite_name, test_name) { \
 	return cr_make_param_array(size_t, validSizes, sizeof(validSizes) / sizeof(validSizes[0])); \
 } \

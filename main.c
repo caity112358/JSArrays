@@ -1,7 +1,7 @@
 #include "main.h"
 #include "jsArrays.h"
 
-VALID_SIZE_TEST(newArray, nullChecks) {
+validSizeTest(newArray, nullChecks) {
 	JsArray arr = JsArrayNew(*size);
 	cr_assert(arr != NULL, "Failed to initialise %zu byte element array", *size);
 	JsArrayFree(arr);
@@ -11,7 +11,7 @@ Test(newArray, incorrectSize) {
 	cr_expect(JsArrayNew(10) == NULL, "Incorrectly sized array is not NULL");
 }
 
-VALID_SIZE_TEST(newArray, methodChecks) {
+validSizeTest(newArray, methodChecks) {
 	JsArray arr = JsArrayNew(*size);
 	cr_assert(arr);
 
@@ -31,7 +31,7 @@ VALID_SIZE_TEST(newArray, methodChecks) {
 	JsArrayFree(arr);
 }
 
-VALID_SIZE_TEST(length, newArrayLength) {
+validSizeTest(length, newArrayLength) {
 	JsArray arr = JsArrayNew(*size);
 	cr_assert(arr);
 
@@ -39,7 +39,7 @@ VALID_SIZE_TEST(length, newArrayLength) {
 	JsArrayFree(arr);
 }
 
-VALID_SIZE_TEST(length, lengthBeforeAndAfterAdding) {
+validSizeTest(length, lengthBeforeAndAfterAdding) {
 	JsArray arr = JsArrayNew(*size);
 	cr_assert(arr);
 
@@ -49,7 +49,7 @@ VALID_SIZE_TEST(length, lengthBeforeAndAfterAdding) {
 	JsArrayFree(arr);
 }
 
-VALID_SIZE_TEST(length, longLengthArray) {
+validSizeTest(length, longLengthArray) {
 	JsArray arr = JsArrayNew(*size);
 	cr_assert(arr);
 
