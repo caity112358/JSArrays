@@ -107,6 +107,7 @@ struct jsArrayWrapper {
 };
 
 JsArray JsArrayNew(size_t size);
+Item JsArrayItemise(int64_t input, size_t size);
 void JsArrayFree(JsArray jsArray);
 
 #endif

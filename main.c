@@ -1,4 +1,5 @@
 #include "main.h"
+#include "jsArrays.h"
 
 VALID_SIZE_TEST(newArray, nullChecks) {
 	JsArray arr = JsArrayNew(*size);
@@ -43,7 +44,7 @@ VALID_SIZE_TEST(length, lengthBeforeAndAfterAdding) {
 	cr_assert(arr);
 
 	cr_expect(arr->length() == 0, "Length of empty array is not zero");
-	arr->append((void *) 1);
+	arr->append(JsArrayItemise(1, *size));
 	cr_expect(arr->length() == 1, "Length of %zu byte element array after adding one element is not 1", *size);
 	JsArrayFree(arr);
 }
@@ -53,7 +54,7 @@ VALID_SIZE_TEST(length, longLengthArray) {
 	cr_assert(arr);
 
 	for (int i = 0; i < 1000; i++)
-		arr->append((void *)(intptr_t) 0b1);
+		arr->append(JsArrayItemise(1, *size));
 
 	cr_expect(arr->length() == 1000, "Length of %zu byte element array after adding 1000 elements is not 1000", *size);
 	JsArrayFree(arr);

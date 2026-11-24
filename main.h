@@ -1,4 +1,3 @@
-#include "jsArrays.h"
 #include <criterion/criterion.h>
 #include <criterion/parameterized.h>
 

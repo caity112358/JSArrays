@@ -205,6 +205,20 @@ static void resize(JsArray self) {
 	}
 }
 
+Item JsArrayItemise(int64_t input, size_t size) {
+	Item ret;
+
+	switch (size) {
+		case sizeof(int64_t): ret.bits64 = input;
+		case sizeof(int32_t): ret.bits32 = input;
+		case sizeof(int16_t): ret.bits16 = input;
+		case sizeof(int8_t): ret.bits8 = input;
+		default: ret.bits64 = 0;
+	}
+
+	return ret;
+}
+
 void JsArrayFree(JsArray self) {
 	if (!self) return;
 
