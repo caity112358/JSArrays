@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 typedef enum {
 	BYTES8 = 8,
@@ -394,10 +395,10 @@ static void printingFunc(JsArray self, char *preamble, char *separator, char *en
 
 static void printElement(JsArray self, Item item) {
 	switch (self->data->elementSize) {
-		case BYTES8: printf("%lld", item.bits64); break;
-		case BYTES4: printf("%d", item.bits32); break;
-		case BYTES2: printf("%d", item.bits16); break;
-		case BYTES1: printf("%d", item.bits8); break;
+		case BYTES8: printf("%" PRId64, item.bits64); break;
+		case BYTES4: printf("%" PRId32, item.bits32); break;
+		case BYTES2: printf("%" PRId16, item.bits16); break;
+		case BYTES1: printf("%" PRId8, item.bits8); break;
 		default: xerrorOut("Failed print");
 	}
 }
