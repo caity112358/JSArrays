@@ -11,25 +11,27 @@ Test(newArray, incorrectSize) {
 	cr_expect(JsArrayNew(10) == NULL, "Incorrectly sized array is not NULL");
 }
 
+#define METHODFMT "Missing %s method on %zu byte element array"
 validSizeTest(newArray, methodChecks) {
 	JsArray arr = JsArrayNew(*size);
 	cr_assert(arr);
 
-	cr_expect(arr->sort != NULL,	"Missing sort method on %zu byte element array", *size);
-	cr_expect(arr->reduce != NULL,	"Missing reduce method on %zu byte element array", *size);
-	cr_expect(arr->map != NULL,	"Missing map method on %zu byte element array", *size);
-	cr_expect(arr->concat != NULL,	"Missing concat method on %zu byte element array", *size);
-	cr_expect(arr->append != NULL,	"Missing append method on %zu byte element array", *size);
-	cr_expect(arr->print != NULL,	"Missing print method on %zu byte element array", *size);
-	cr_expect(arr->length != NULL,	"Missing length method on %zu byte element array", *size);
-	cr_expect(arr->clone != NULL,	"Missing clone method on %zu byte element array", *size);
-	cr_expect(arr->some != NULL,	"Missing some method on %zu byte element array", *size);
-	cr_expect(arr->every != NULL,	"Missing every method on %zu byte element array", *size);
-	cr_expect(arr->get != NULL,	"Missing get method on %zu byte element array", *size);
-	cr_expect(arr->set != NULL,	"Missing set method on %zu byte element array", *size);
+	cr_expect(arr->sort	!= NULL,	METHODFMT, "sort", *size);
+	cr_expect(arr->reduce	!= NULL,	METHODFMT, "reduce", *size);
+	cr_expect(arr->map	!= NULL,	METHODFMT, "map", *size);
+	cr_expect(arr->concat	!= NULL,	METHODFMT, "concat", *size);
+	cr_expect(arr->append	!= NULL,	METHODFMT, "append", *size);
+	cr_expect(arr->print	!= NULL,	METHODFMT, "print", *size);
+	cr_expect(arr->length	!= NULL,	METHODFMT, "length", *size);
+	cr_expect(arr->clone	!= NULL,	METHODFMT, "clone", *size);
+	cr_expect(arr->some	!= NULL,	METHODFMT, "some", *size);
+	cr_expect(arr->every	!= NULL,	METHODFMT, "every", *size);
+	cr_expect(arr->get	!= NULL,	METHODFMT, "get", *size);
+	cr_expect(arr->set	!= NULL,	METHODFMT, "set", *size);
 
 	JsArrayFree(arr);
 }
+#undef METHODFMT
 
 validSizeTest(length, newArrayLength) {
 	JsArray arr = JsArrayNew(*size);

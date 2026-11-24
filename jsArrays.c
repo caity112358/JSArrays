@@ -363,7 +363,7 @@ static void appendHandler(ffi_cif* cif, void* ret, void** args, void* user_data)
 }
 
 static int appendingFunc(JsArray self, Item item) {
-	if (self->length() >= self->data->cap) {
+	if (self->data->len >= self->data->cap) {
 		resizeTo(self, self->data->cap * 2);
 	}
 	
