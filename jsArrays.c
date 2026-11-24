@@ -253,12 +253,12 @@ static JsArray sortingFunc(JsArray self, Comp funcptr) {
 	return self;
 }
 
-static bool sortCompare(JsArray self, void *funcptr, void *a, void *b) {
+static bool sortCompare(JsArray self, Comp funcptr, void *a, void *b) {
 	switch (self->data->elementSize) {
-		case BYTES8: return ((Comp64) funcptr)((int64_t)(intptr_t) a, (int64_t)(intptr_t) b);
-		case BYTES4: return ((Comp32) funcptr)((int32_t)(intptr_t) a, (int32_t)(intptr_t) b);
-		case BYTES2: return ((Comp16) funcptr)((int16_t)(intptr_t) a, (int16_t)(intptr_t) b);
-		case BYTES1: return ((Comp8) funcptr)((int8_t)(intptr_t) a, (int8_t)(intptr_t) b);
+		case BYTES8: return funcptr.Comp64((int64_t)(intptr_t) a, (int64_t)(intptr_t) b);
+		case BYTES4: return funcptr.Comp32((int32_t)(intptr_t) a, (int32_t)(intptr_t) b);
+		case BYTES2: return funcptr.Comp16((int16_t)(intptr_t) a, (int16_t)(intptr_t) b);
+		case BYTES1: return funcptr.Comp8((int8_t)(intptr_t) a, (int8_t)(intptr_t) b);
 		default: xerrorOut("Failed comparison");
 	}
 	
@@ -282,12 +282,12 @@ static int reducingFunc(JsArray self, Reduce funcptr, int start) {
 	return accumulator;
 }
 
-static int reduceElement(JsArray self, void *funcptr, int accum, void *item) {
+static int reduceElement(JsArray self, Reduce funcptr, int accum, void *item) {
 	switch (self->data->elementSize) {
-		case BYTES8: return ((Reduce64) funcptr)(accum, (int64_t)(intptr_t) item);
-		case BYTES4: return ((Reduce32) funcptr)(accum, (int32_t)(intptr_t) item);
-		case BYTES2: return ((Reduce16) funcptr)(accum, (int16_t)(intptr_t) item);
-		case BYTES1: return ((Reduce8)  funcptr)(accum, (int8_t)(intptr_t)  item);
+		case BYTES8: return funcptr.Reduce64(accum, (int64_t)(intptr_t) item);
+		case BYTES4: return funcptr.Reduce32(accum, (int32_t)(intptr_t) item);
+		case BYTES2: return funcptr.Reduce16(accum, (int16_t)(intptr_t) item);
+		case BYTES1: return funcptr.Reduce8(accum, (int8_t)(intptr_t)  item);
 		default: xerrorOut("Failed reduction");
 	}
 	
@@ -311,10 +311,10 @@ static JsArray mappingFunc(JsArray self, Map funcptr) {
 
 static void *mapElement(JsArray self, Map funcptr, void *item) {
 	switch (self->data->elementSize) {
-		case BYTES8: return (void *)(intptr_t) ((Map64) funcptr)((int64_t)(intptr_t) item);
-		case BYTES4: return (void *)(intptr_t) ((Map32) funcptr)((int32_t)(intptr_t) item);
-		case BYTES2: return (void *)(intptr_t) ((Map16) funcptr)((int16_t)(intptr_t) item);
-		case BYTES1: return (void *)(intptr_t) ((Map8) funcptr)((int8_t)(intptr_t) item);
+		case BYTES8: return (void *)(intptr_t) funcptr.Map64((int64_t)(intptr_t) item);
+		case BYTES4: return (void *)(intptr_t) funcptr.Map32((int32_t)(intptr_t) item);
+		case BYTES2: return (void *)(intptr_t) funcptr.Map16((int16_t)(intptr_t) item);
+		case BYTES1: return (void *)(intptr_t) funcptr.Map8((int8_t)(intptr_t) item);
 		default: xerrorOut("Failed map");
 	}
 
@@ -378,7 +378,7 @@ static void printingFunc(JsArray self, char *preamble, char *separator, char *en
 
 static void printElement(JsArray self, void *item) {
 	switch (self->data->elementSize) {
-		case BYTES8: printf("%ld", (int64_t)(intptr_t) item); break;
+		case BYTES8: printf("%lld", (int64_t)(intptr_t) item); break;
 		case BYTES4: printf("%d", (int32_t)(intptr_t) item); break;
 		case BYTES2: printf("%d", (int16_t)(intptr_t) item); break;
 		case BYTES1: printf("%d", (int8_t)(intptr_t) item); break;
@@ -437,10 +437,10 @@ static bool everyFunc(JsArray self, Test test) {
 
 static bool testElement(JsArray self, Test funcptr, void *item) {
 	switch (self->data->elementSize) {
-		case BYTES8: return ((Test64) funcptr)((int64_t)(intptr_t) item);
-		case BYTES4: return ((Test32) funcptr)((int32_t)(intptr_t) item);
-		case BYTES2: return ((Test16) funcptr)((int16_t)(intptr_t) item);
-		case BYTES1: return ((Test8) funcptr)((int8_t)(intptr_t) item);
+		case BYTES8: return funcptr.Test64((int64_t)(intptr_t) item);
+		case BYTES4: return funcptr.Test32((int32_t)(intptr_t) item);
+		case BYTES2: return funcptr.Test16((int16_t)(intptr_t) item);
+		case BYTES1: return funcptr.Test8((int8_t)(intptr_t) item);
 		default: xerrorOut("Failed test");
 	}
 	
