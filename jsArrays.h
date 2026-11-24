@@ -8,6 +8,13 @@
 
 typedef struct jsArrayWrapper *JsArray;
 
+typedef union {
+	int64_t bits64;
+	int32_t bits32;
+	int16_t bits16;
+	int8_t bits8;
+} Item;
+
 // Returns true if a comes before b
 // Comp(a, b) -> bool.
 typedef union {
@@ -19,7 +26,7 @@ typedef union {
 
 // Returns the value that becomes the accum arg
 // on the next call.
-// Reduce(accum, curr) -> accum
+// Reduce(accum, curr) -> new accum
 typedef union {
 	int (*Reduce64)(int accum, int64_t item);
 	int (*Reduce32)(int accum, int32_t item);
@@ -50,14 +57,14 @@ typedef JsArray (*SortFunc)(Comp funcptr);
 typedef int (*ReduceFunc)(Reduce funcptr, int start);
 typedef JsArray (*MapFunc)(Map funcptr);
 typedef JsArray (*ConcatFunc)(JsArray other);
-typedef int (*AppendFunc)(void *item);
+typedef int (*AppendFunc)(Item item);
 typedef void (*PrintFunc)(char *preamble, char *separator, char *end);
 typedef int (*LengthFunc)(void);
 typedef JsArray (*CloneFunc)(void);
 typedef bool (*SomeFunc)(Test test);
 typedef bool (*EveryFunc)(Test test);
-typedef void *(*GetFunc)(uint index);
-typedef void (*SetFunc)(uint index, void *item);
+typedef Item (*GetFunc)(uint index);
+typedef void (*SetFunc)(uint index, Item item);
 
 typedef struct jsArrayData *JsArrayData;
 

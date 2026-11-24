@@ -47,29 +47,29 @@ static void getHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void setHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 
 static JsArray sortingFunc(JsArray self, Comp funcptr);
-static bool sortCompare(JsArray self, Comp funcptr, void *a, void *b);
+static bool sortCompare(JsArray self, Comp funcptr, Item a, Item b);
 
 static int reducingFunc(JsArray self, Reduce funcptr, int start);
-static int reduceElement(JsArray self, Reduce funcptr, int accum, void *item);
+static int reduceElement(JsArray self, Reduce funcptr, int accum, Item item);
 
 static JsArray mappingFunc(JsArray self, Map funcptr);
-static void *mapElement(JsArray self, Map funcptr, void *item);
+static Item mapElement(JsArray self, Map funcptr, Item item);
 
 static JsArray concattingFunc(JsArray self, JsArray other);
 
-static int appendingFunc(JsArray self, void *item);
+static int appendingFunc(JsArray self, Item item);
 
 static void printingFunc(JsArray self, char *preamble, char *separator, char *end);
-static void printElement(JsArray self, void *item);
+static void printElement(JsArray self, Item item);
 
 static JsArray cloningFunc(JsArray self);
 
 static bool someFunc(JsArray self, Test test);
 static bool everyFunc(JsArray self, Test test);
-static bool testElement(JsArray self, Test funcptr, void *item);
+static bool testElement(JsArray self, Test funcptr, Item item);
 
-static void *gettingFunc(JsArray self, uint index);
-static void settingFunc(JsArray self, uint index, void *item);
+static Item gettingFunc(JsArray self, uint index);
+static void settingFunc(JsArray self, uint index, Item item);
 
 typedef void (*HandlerFunc)(ffi_cif* cif, void* ret, void** args, void* user_data);
 
@@ -244,7 +244,7 @@ static JsArray sortingFunc(JsArray self, Comp funcptr) {
 			if (sortCompare(self, funcptr, self->get(j), self->get(min))) min = j;
 
 		if (min != i) {
-			void *temp = self->get(min);
+			Item temp = self->get(min);
 			self->set(min, self->get(i));
 			self->set(i, temp);
 		}
@@ -253,12 +253,12 @@ static JsArray sortingFunc(JsArray self, Comp funcptr) {
 	return self;
 }
 
-static bool sortCompare(JsArray self, Comp funcptr, void *a, void *b) {
+static bool sortCompare(JsArray self, Comp funcptr, Item a, Item b) {
 	switch (self->data->elementSize) {
-		case BYTES8: return funcptr.Comp64((int64_t)(intptr_t) a, (int64_t)(intptr_t) b);
-		case BYTES4: return funcptr.Comp32((int32_t)(intptr_t) a, (int32_t)(intptr_t) b);
-		case BYTES2: return funcptr.Comp16((int16_t)(intptr_t) a, (int16_t)(intptr_t) b);
-		case BYTES1: return funcptr.Comp8((int8_t)(intptr_t) a, (int8_t)(intptr_t) b);
+		case BYTES8: return funcptr.Comp64(a.bits64, b.bits64);
+		case BYTES4: return funcptr.Comp32(a.bits32, b.bits32);
+		case BYTES2: return funcptr.Comp16(a.bits16, b.bits16);
+		case BYTES1: return funcptr.Comp8(a.bits8, b.bits8);
 		default: xerrorOut("Failed comparison");
 	}
 	
@@ -282,12 +282,12 @@ static int reducingFunc(JsArray self, Reduce funcptr, int start) {
 	return accumulator;
 }
 
-static int reduceElement(JsArray self, Reduce funcptr, int accum, void *item) {
+static int reduceElement(JsArray self, Reduce funcptr, int accum, Item item) {
 	switch (self->data->elementSize) {
-		case BYTES8: return funcptr.Reduce64(accum, (int64_t)(intptr_t) item);
-		case BYTES4: return funcptr.Reduce32(accum, (int32_t)(intptr_t) item);
-		case BYTES2: return funcptr.Reduce16(accum, (int16_t)(intptr_t) item);
-		case BYTES1: return funcptr.Reduce8(accum, (int8_t)(intptr_t)  item);
+		case BYTES8: return funcptr.Reduce64(accum, item.bits64);
+		case BYTES4: return funcptr.Reduce32(accum, item.bits32);
+		case BYTES2: return funcptr.Reduce16(accum, item.bits16);
+		case BYTES1: return funcptr.Reduce8(accum, item.bits8);
 		default: xerrorOut("Failed reduction");
 	}
 	
@@ -309,16 +309,18 @@ static JsArray mappingFunc(JsArray self, Map funcptr) {
 	return self;
 }
 
-static void *mapElement(JsArray self, Map funcptr, void *item) {
+static Item mapElement(JsArray self, Map funcptr, Item item) {
+	Item ret;
+	
 	switch (self->data->elementSize) {
-		case BYTES8: return (void *)(intptr_t) funcptr.Map64((int64_t)(intptr_t) item);
-		case BYTES4: return (void *)(intptr_t) funcptr.Map32((int32_t)(intptr_t) item);
-		case BYTES2: return (void *)(intptr_t) funcptr.Map16((int16_t)(intptr_t) item);
-		case BYTES1: return (void *)(intptr_t) funcptr.Map8((int8_t)(intptr_t) item);
+		case BYTES8: ret.bits64 = funcptr.Map64(item.bits64);
+		case BYTES4: ret.bits32 = funcptr.Map32(item.bits32);
+		case BYTES2: ret.bits16 = funcptr.Map16(item.bits16);
+		case BYTES1: ret.bits8 = funcptr.Map8(item.bits8);
 		default: xerrorOut("Failed map");
 	}
 
-	return NULL;
+	return ret;
 }
 
 static void concatHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -341,12 +343,12 @@ static JsArray concattingFunc(JsArray self, JsArray other) {
 
 static void appendHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
-	void *item = *(void **) args[0];
+	Item item = *(Item *) args[0];
 
 	*(ffi_sarg*) ret = appendingFunc(self, item);
 }
 
-static int appendingFunc(JsArray self, void *item) {
+static int appendingFunc(JsArray self, Item item) {
 	if (self->length() >= self->data->cap) {
 		resizeTo(self, self->data->cap * 2);
 	}
@@ -376,12 +378,12 @@ static void printingFunc(JsArray self, char *preamble, char *separator, char *en
 	printf("%s", end);
 }
 
-static void printElement(JsArray self, void *item) {
+static void printElement(JsArray self, Item item) {
 	switch (self->data->elementSize) {
-		case BYTES8: printf("%lld", (int64_t)(intptr_t) item); break;
-		case BYTES4: printf("%d", (int32_t)(intptr_t) item); break;
-		case BYTES2: printf("%d", (int16_t)(intptr_t) item); break;
-		case BYTES1: printf("%d", (int8_t)(intptr_t) item); break;
+		case BYTES8: printf("%lld", item.bits64); break;
+		case BYTES4: printf("%d", item.bits32); break;
+		case BYTES2: printf("%d", item.bits16); break;
+		case BYTES1: printf("%d", item.bits8); break;
 		default: xerrorOut("Failed print");
 	}
 }
@@ -435,12 +437,12 @@ static bool everyFunc(JsArray self, Test test) {
 	return true;
 }
 
-static bool testElement(JsArray self, Test funcptr, void *item) {
+static bool testElement(JsArray self, Test funcptr, Item item) {
 	switch (self->data->elementSize) {
-		case BYTES8: return funcptr.Test64((int64_t)(intptr_t) item);
-		case BYTES4: return funcptr.Test32((int32_t)(intptr_t) item);
-		case BYTES2: return funcptr.Test16((int16_t)(intptr_t) item);
-		case BYTES1: return funcptr.Test8((int8_t)(intptr_t) item);
+		case BYTES8: return funcptr.Test64(item.bits64);
+		case BYTES4: return funcptr.Test32(item.bits32);
+		case BYTES2: return funcptr.Test16(item.bits16);
+		case BYTES1: return funcptr.Test8(item.bits8);
 		default: xerrorOut("Failed test");
 	}
 	
@@ -451,35 +453,36 @@ static void getHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	uint index = *(uint *) args[0];
 
-	*(void **) ret = gettingFunc(self, index);
+	*(Item *) ret = gettingFunc(self, index);
 }
 
-static void *gettingFunc(JsArray self, uint index) {
+static Item gettingFunc(JsArray self, uint index) {
+	Item ret;
 	switch (self->data->elementSize) {
-		case BYTES8: return (void*)(intptr_t) self->data->arr[index].bits64;
-		case BYTES4: return (void*)(intptr_t) self->data->arr[index / 2].bits32[index % 2];
-		case BYTES2: return (void*)(intptr_t) self->data->arr[index / 4].bits16[index % 4];
-		case BYTES1: return (void*)(intptr_t) self->data->arr[index / 8].bits8[index % 8];
+		case BYTES8: ret.bits64 = self->data->arr[index].bits64;
+		case BYTES4: ret.bits32 = self->data->arr[index / 2].bits32[index % 2];
+		case BYTES2: ret.bits16 = self->data->arr[index / 4].bits16[index % 4];
+		case BYTES1: ret.bits8 = self->data->arr[index / 8].bits8[index % 8];
 		default: xerrorOut("Failed get");
 	}
 
-	return NULL;
+	return ret;
 }
 
 static void setHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	uint index = *(uint *) args[0];
-	void *item = *(void **) args[1];
+	Item item = *(Item *) args[1];
 
 	settingFunc(self, index, item);
 }
 
-static void settingFunc(JsArray self, uint index, void *item) {
+static void settingFunc(JsArray self, uint index, Item item) {
 	switch (self->data->elementSize) {
-		case BYTES8: self->data->arr[index].bits64 = (int64_t)(intptr_t) item; break;
-		case BYTES4: self->data->arr[index / 2].bits32[index % 2] = (int32_t)(intptr_t) item; break;
-		case BYTES2: self->data->arr[index / 4].bits16[index % 4] = (int16_t)(intptr_t) item; break;
-		case BYTES1: self->data->arr[index / 8].bits8[index % 8] = (int8_t)(intptr_t) item; break;
+		case BYTES8: self->data->arr[index].bits64 = item.bits64; break;
+		case BYTES4: self->data->arr[index / 2].bits32[index % 2] = item.bits32; break;
+		case BYTES2: self->data->arr[index / 4].bits16[index % 4] = item.bits16; break;
+		case BYTES1: self->data->arr[index / 8].bits8[index % 8] = item.bits8; break;
 		default: xerrorOut("Failed set");
 	}
 }
