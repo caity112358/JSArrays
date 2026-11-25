@@ -12,25 +12,27 @@ Test(newArray, incorrectSize) {
 }
 
 #define METHODFMT "Missing %s method on %zu byte element array"
+#define checkMethod(methodName) cr_expect(arr->methodName != NULL, METHODFMT, "methodName", *size)
 validSizeTest(newArray, methodChecks) {
 	JsArray arr = JsArrayNew(*size);
 	cr_assert(arr);
-
-	cr_expect(arr->sort	!= NULL,	METHODFMT, "sort", *size);
-	cr_expect(arr->reduce	!= NULL,	METHODFMT, "reduce", *size);
-	cr_expect(arr->map	!= NULL,	METHODFMT, "map", *size);
-	cr_expect(arr->concat	!= NULL,	METHODFMT, "concat", *size);
-	cr_expect(arr->append	!= NULL,	METHODFMT, "append", *size);
-	cr_expect(arr->print	!= NULL,	METHODFMT, "print", *size);
-	cr_expect(arr->length	!= NULL,	METHODFMT, "length", *size);
-	cr_expect(arr->clone	!= NULL,	METHODFMT, "clone", *size);
-	cr_expect(arr->some	!= NULL,	METHODFMT, "some", *size);
-	cr_expect(arr->every	!= NULL,	METHODFMT, "every", *size);
-	cr_expect(arr->get	!= NULL,	METHODFMT, "get", *size);
-	cr_expect(arr->set	!= NULL,	METHODFMT, "set", *size);
+	
+	checkMethod(sort);
+	checkMethod(reduce);
+	checkMethod(map);
+	checkMethod(concat);
+	checkMethod(append);
+	checkMethod(print);
+	checkMethod(length);
+	checkMethod(clone);
+	checkMethod(some);
+	checkMethod(every);
+	checkMethod(get);
+	checkMethod(set);
 
 	JsArrayFree(arr);
 }
+#undef checkMethod
 #undef METHODFMT
 
 validSizeTest(length, newArrayLength) {
@@ -51,13 +53,28 @@ validSizeTest(length, lengthBeforeAndAfterAdding) {
 	JsArrayFree(arr);
 }
 
-validSizeTest(length, longLengthArray) {
+validSizeTest(length, lengthBeforeAndAfterReallocation) {
 	JsArray arr = JsArrayNew(*size);
 	cr_assert(arr);
 
-	for (int i = 0; i < 1000; i++)
+	for (int i = 0; i < 64; i++)
 		arr->append(JsArrayItemise(1, *size));
 
-	cr_expect(arr->length() == 1000, "Length of %zu byte element array after adding 1000 elements is not 1000", *size);
+	cr_expect(arr->length() == 64, "Length of %zu byte element array after adding 64 elements is not 64", *size);
+	arr->append(JsArrayItemise(1, *size));
+	cr_expect(arr->length() == 65, "Length of %zu byte element array after adding 65 elements is not 65", *size);
+	
 	JsArrayFree(arr);
 }
+
+validSizeTest(length, lengthOfLongArray) {
+	JsArray arr = JsArrayNew(*size);
+	cr_assert(arr);
+
+	for (int i = 0; i < 1000000; i++)
+		arr->append(JsArrayItemise(1, *size));
+
+	cr_expect(arr->length() == 1000000, "Length of %zu byte element array after adding 1000000 elements is not 64", *size);
+	JsArrayFree(arr);
+}
+
