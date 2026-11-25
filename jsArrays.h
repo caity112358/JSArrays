@@ -63,8 +63,8 @@ typedef int (*LengthFunc)(void);
 typedef JsArray (*CloneFunc)(void);
 typedef bool (*SomeFunc)(Test test);
 typedef bool (*EveryFunc)(Test test);
-typedef Item (*GetFunc)(uint index);
-typedef void (*SetFunc)(uint index, Item item);
+typedef Item (*GetFunc)(int index);
+typedef void (*SetFunc)(int index, Item item);
 
 typedef struct jsArrayData *JsArrayData;
 

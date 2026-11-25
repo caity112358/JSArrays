@@ -69,8 +69,8 @@ static bool someFunc(JsArray self, Test test);
 static bool everyFunc(JsArray self, Test test);
 static bool testElement(JsArray self, Test funcptr, Item item);
 
-static Item gettingFunc(JsArray self, uint index);
-static void settingFunc(JsArray self, uint index, Item item);
+static Item gettingFunc(JsArray self, int index);
+static void settingFunc(JsArray self, int index, Item item);
 
 typedef void (*HandlerFunc)(ffi_cif* cif, void* ret, void** args, void* user_data);
 
@@ -119,7 +119,7 @@ static FuncData funcData[NUM_METHODS] = {
 
 JsArray JsArrayNew(size_t size) {
 	if (!validSize(size)) return NULL;
-	
+
 	JsArray self = calloc(1, sizeof(struct jsArrayWrapper));
 	if (!self) goto fail;
 
@@ -210,10 +210,10 @@ Item JsArrayItemise(int64_t input, size_t size) {
 	Item ret;
 
 	switch (size) {
-		case sizeof(int64_t): ret.bits64 = input;
-		case sizeof(int32_t): ret.bits32 = input;
-		case sizeof(int16_t): ret.bits16 = input;
-		case sizeof(int8_t): ret.bits8 = input;
+		case sizeof(int64_t): ret.bits64 = input; break;
+		case sizeof(int32_t): ret.bits32 = input; break;
+		case sizeof(int16_t): ret.bits16 = input; break;
+		case sizeof(int8_t): ret.bits8 = input; break;
 		default: ret.bits64 = 0;
 	}
 
@@ -276,7 +276,7 @@ static bool sortCompare(JsArray self, Comp funcptr, Item a, Item b) {
 		case BYTES1: return funcptr.Comp8(a.bits8, b.bits8);
 		default: xerrorOut("Failed comparison");
 	}
-	
+
 	return NULL;
 }
 
@@ -305,7 +305,7 @@ static int reduceElement(JsArray self, Reduce funcptr, int accum, Item item) {
 		case BYTES1: return funcptr.Reduce8(accum, item.bits8);
 		default: xerrorOut("Failed reduction");
 	}
-	
+
 	return 0;
 }
 
@@ -326,12 +326,12 @@ static JsArray mappingFunc(JsArray self, Map funcptr) {
 
 static Item mapElement(JsArray self, Map funcptr, Item item) {
 	Item ret;
-	
+
 	switch (self->data->elementSize) {
-		case BYTES8: ret.bits64 = funcptr.Map64(item.bits64);
-		case BYTES4: ret.bits32 = funcptr.Map32(item.bits32);
-		case BYTES2: ret.bits16 = funcptr.Map16(item.bits16);
-		case BYTES1: ret.bits8 = funcptr.Map8(item.bits8);
+		case BYTES8: ret.bits64 = funcptr.Map64(item.bits64); break;
+		case BYTES4: ret.bits32 = funcptr.Map32(item.bits32); break;
+		case BYTES2: ret.bits16 = funcptr.Map16(item.bits16); break;
+		case BYTES1: ret.bits8 = funcptr.Map8(item.bits8); break;
 		default: xerrorOut("Failed map");
 	}
 
@@ -367,7 +367,7 @@ static int appendingFunc(JsArray self, Item item) {
 	if (self->data->len >= self->data->cap) {
 		resizeTo(self, self->data->cap * 2);
 	}
-	
+
 	self->set(self->data->len++, item);
 
 	return self->data->len;
@@ -460,24 +460,26 @@ static bool testElement(JsArray self, Test funcptr, Item item) {
 		case BYTES1: return funcptr.Test8(item.bits8);
 		default: xerrorOut("Failed test");
 	}
-	
+
 	return NULL;
 }
 
 static void getHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
-	uint index = *(uint *) args[0];
+	int index = *(int *) args[0];
 
 	*(Item *) ret = gettingFunc(self, index);
 }
 
-static Item gettingFunc(JsArray self, uint index) {
+static Item gettingFunc(JsArray self, int index) {
+	if (abs(index) >= self->data->len) return (Item)(int64_t) 0;
+	
 	Item ret;
 	switch (self->data->elementSize) {
-		case BYTES8: ret.bits64 = self->data->arr[index].bits64;
-		case BYTES4: ret.bits32 = self->data->arr[index / 2].bits32[index % 2];
-		case BYTES2: ret.bits16 = self->data->arr[index / 4].bits16[index % 4];
-		case BYTES1: ret.bits8 = self->data->arr[index / 8].bits8[index % 8];
+		case BYTES8: ret.bits64 = self->data->arr[index].bits64; break;
+		case BYTES4: ret.bits32 = self->data->arr[index / 2].bits32[index % 2]; break;
+		case BYTES2: ret.bits16 = self->data->arr[index / 4].bits16[index % 4]; break;
+		case BYTES1: ret.bits8 = self->data->arr[index / 8].bits8[index % 8]; break;
 		default: xerrorOut("Failed get");
 	}
 
@@ -486,13 +488,15 @@ static Item gettingFunc(JsArray self, uint index) {
 
 static void setHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
-	uint index = *(uint *) args[0];
+	int index = *(int *) args[0];
 	Item item = *(Item *) args[1];
 
 	settingFunc(self, index, item);
 }
 
-static void settingFunc(JsArray self, uint index, Item item) {
+static void settingFunc(JsArray self, int index, Item item) {
+	if (abs(index) >= self->data->len) return;
+	
 	switch (self->data->elementSize) {
 		case BYTES8: self->data->arr[index].bits64 = item.bits64; break;
 		case BYTES4: self->data->arr[index / 2].bits32[index % 2] = item.bits32; break;
