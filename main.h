@@ -7,7 +7,7 @@ ParameterizedTestParameters(suite_name, test_name) { \
 } \
 ParameterizedTest(size_t *size, suite_name, test_name)
 
-static size_t validSizes[] = {
+size_t validSizes[4] = {
 	sizeof(int64_t),
 	sizeof(int32_t),
 	sizeof(int16_t),

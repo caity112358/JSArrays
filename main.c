@@ -48,7 +48,7 @@ validSizeTest(length, lengthBeforeAndAfterAdding) {
 	cr_assert(arr);
 
 	cr_expect(arr->length() == 0, "Length of empty array is not zero");
-	arr->append(JsArrayItemise(1, *size));
+	arr->append(1);
 	cr_expect(arr->length() == 1, "Length of %zu byte element array after adding one element is not 1", *size);
 	JsArrayFree(arr);
 }
@@ -58,10 +58,10 @@ validSizeTest(length, lengthBeforeAndAfterReallocation) {
 	cr_assert(arr);
 
 	for (int i = 0; i < 64; i++)
-		arr->append(JsArrayItemise(1, *size));
+		arr->append(1);
 
 	cr_expect(arr->length() == 64, "Length of %zu byte element array after adding 64 elements is not 64", *size);
-	arr->append(JsArrayItemise(1, *size));
+	arr->append(1);
 	cr_expect(arr->length() == 65, "Length of %zu byte element array after adding 65 elements is not 65", *size);
 	
 	JsArrayFree(arr);
@@ -72,7 +72,7 @@ validSizeTest(length, lengthOfLongArray) {
 	cr_assert(arr);
 
 	for (int i = 0; i < 1000000; i++)
-		arr->append(JsArrayItemise(1, *size));
+		arr->append(1);
 
 	cr_expect(arr->length() == 1000000, "Length of %zu byte element array after adding 1000000 elements is not 64", *size);
 	JsArrayFree(arr);
