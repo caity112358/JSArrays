@@ -69,8 +69,8 @@ static bool someFunc(JsArray self, Test test);
 static bool everyFunc(JsArray self, Test test);
 static bool testElement(JsArray self, Test funcptr, int64_t item);
 
-static Item gettingFunc(JsArray self, int index);
-static void settingFunc(JsArray self, int index, Item item);
+static int64_t gettingFunc(JsArray self, int index);
+static void settingFunc(JsArray self, int index, int64_t item);
 
 typedef void (*HandlerFunc)(ffi_cif* cif, void* ret, void** args, void* user_data);
 
@@ -452,40 +452,39 @@ static void getHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	int index = *(int *) args[0];
 
-	*(Item *) ret = gettingFunc(self, index);
+	*(int64_t *) ret = gettingFunc(self, index);
 }
 
-static Item gettingFunc(JsArray self, int index) {
-	if (abs(index) >= self->data->len) return (Item)(int64_t) 0;
-	
-	Item ret;
+static int64_t gettingFunc(JsArray self, int index) {
+	if (abs(index) >= self->data->len) return (int64_t)(int64_t) 0;
+
 	switch (self->data->elementSize) {
-		case BYTES8: ret.bits64 = self->data->arr[index].bits64; break;
-		case BYTES4: ret.bits32 = self->data->arr[index / 2].bits32[index % 2]; break;
-		case BYTES2: ret.bits16 = self->data->arr[index / 4].bits16[index % 4]; break;
-		case BYTES1: ret.bits8 = self->data->arr[index / 8].bits8[index % 8]; break;
+		case BYTES8: return self->data->arr[index].bits64; break;
+		case BYTES4: return self->data->arr[index / 2].bits32[index % 2]; break;
+		case BYTES2: return self->data->arr[index / 4].bits16[index % 4]; break;
+		case BYTES1: return self->data->arr[index / 8].bits8[index % 8]; break;
 		default: xerrorOut("Failed get");
 	}
 
-	return ret;
+	return 0;
 }
 
 static void setHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	int index = *(int *) args[0];
-	Item item = *(Item *) args[1];
+	int64_t item = *(int64_t *) args[1];
 
 	settingFunc(self, index, item);
 }
 
-static void settingFunc(JsArray self, int index, Item item) {
+static void settingFunc(JsArray self, int index, int64_t item) {
 	if (abs(index) >= self->data->len) return;
-	
+
 	switch (self->data->elementSize) {
-		case BYTES8: self->data->arr[index].bits64 = item.bits64; break;
-		case BYTES4: self->data->arr[index / 2].bits32[index % 2] = item.bits32; break;
-		case BYTES2: self->data->arr[index / 4].bits16[index % 4] = item.bits16; break;
-		case BYTES1: self->data->arr[index / 8].bits8[index % 8] = item.bits8; break;
+		case BYTES8: self->data->arr[index].bits64 = item; break;
+		case BYTES4: self->data->arr[index / 2].bits32[index % 2] = item; break;
+		case BYTES2: self->data->arr[index / 4].bits16[index % 4] = item; break;
+		case BYTES1: self->data->arr[index / 8].bits8[index % 8] = item; break;
 		default: xerrorOut("Failed set");
 	}
 }
