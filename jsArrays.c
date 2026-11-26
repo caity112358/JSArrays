@@ -72,6 +72,9 @@ static bool testElement(JsArray self, Test funcptr, int64_t item);
 static int64_t gettingFunc(JsArray self, int index);
 static void settingFunc(JsArray self, int index, int64_t item);
 
+static void shuffleHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
+static void shufflingFunc(JsArray self);
+
 typedef void (*HandlerFunc)(ffi_cif* cif, void* ret, void** args, void* user_data);
 
 struct jsArrayData {
@@ -82,7 +85,7 @@ struct jsArrayData {
 	ffi_cif *cifs;
 };
 
-#define NUM_METHODS 12
+#define NUM_METHODS 13
 
 typedef struct {
 	int nargs;
@@ -114,7 +117,8 @@ static FuncData funcData[NUM_METHODS] = {
 	{	.nargs = 1,	.rtype = &ffi_type_uint8,	.atypes = someArgTypes, 	.handler = someHandler },
 	{	.nargs = 1,	.rtype = &ffi_type_uint8,	.atypes = everyArgTypes, 	.handler = everyHandler },
 	{	.nargs = 1,	.rtype = &ffi_type_sint64,	.atypes = getArgTypes,		.handler = getHandler },
-	{	.nargs = 2,	.rtype = &ffi_type_void,	.atypes = setArgTypes,		.handler = setHandler }
+	{	.nargs = 2,	.rtype = &ffi_type_void,	.atypes = setArgTypes,		.handler = setHandler },
+	{	.nargs = 0,	.rtype = &ffi_type_void,	.atypes = NULL,			.handler = shuffleHandler },
 };
 
 JsArray JsArrayNew(size_t size) {
@@ -183,6 +187,7 @@ static void assignMethod(JsArray self, void *code, int i) {
 		case 9: self->every	= (EveryFunc)	code; break;
 		case 10: self->get	= (GetFunc)	code; break;
 		case 11: self->set	= (SetFunc)	code; break;
+		case 12: self->shuffle 	= (ShuffleFunc)	code; break;
 		default: xerrorOut("Unassignable method");
 	}
 }
@@ -486,5 +491,25 @@ static void settingFunc(JsArray self, int index, int64_t item) {
 		case BYTES2: self->data->arr[index / 4].bits16[index % 4] = item; break;
 		case BYTES1: self->data->arr[index / 8].bits8[index % 8] = item; break;
 		default: xerrorOut("Failed set");
+	}
+}
+
+static void shuffleHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
+	JsArray self = user_data;
+
+	shufflingFunc(self);
+}
+
+static void shufflingFunc(JsArray self) {
+	int len = self->data->len;
+
+	for (int i = 0; i < len; i++) {
+		int index = rand() % i + 1;
+
+		int64_t curr = self->get(i);
+		int64_t other = self->get(index);
+
+		self->set(i, other);
+		self->set(index, curr);
 	}
 }

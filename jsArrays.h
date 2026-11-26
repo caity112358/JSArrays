@@ -58,6 +58,7 @@ typedef bool (*SomeFunc)(Test test);
 typedef bool (*EveryFunc)(Test test);
 typedef int64_t (*GetFunc)(int index);
 typedef void (*SetFunc)(int index, int64_t item);
+typedef void (*ShuffleFunc)(void);
 
 typedef struct jsArrayData *JsArrayData;
 
@@ -95,6 +96,9 @@ struct jsArrayWrapper {
 	GetFunc get;
 	SetFunc set;
 
+	// Shuffles the array
+	ShuffleFunc shuffle;
+	
 	// Pointer to extra data defined in the .c file, essentiall private vars
 	JsArrayData data;
 };
