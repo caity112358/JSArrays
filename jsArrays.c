@@ -48,26 +48,26 @@ static void getHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void setHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 
 static JsArray sortingFunc(JsArray self, Comp funcptr);
-static bool sortCompare(JsArray self, Comp funcptr, Item a, Item b);
+static bool sortCompare(JsArray self, Comp funcptr, int64_t a, int64_t b);
 
 static int reducingFunc(JsArray self, Reduce funcptr, int start);
-static int reduceElement(JsArray self, Reduce funcptr, int accum, Item item);
+static int reduceElement(JsArray self, Reduce funcptr, int accum, int64_t item);
 
 static JsArray mappingFunc(JsArray self, Map funcptr);
-static Item mapElement(JsArray self, Map funcptr, Item item);
+static int64_t mapElement(JsArray self, Map funcptr, int64_t item);
 
 static JsArray concattingFunc(JsArray self, JsArray other);
 
-static int appendingFunc(JsArray self, Item item);
+static int appendingFunc(JsArray self, int64_t item);
 
 static void printingFunc(JsArray self, char *preamble, char *separator, char *end);
-static void printElement(JsArray self, Item item);
+static void printElement(JsArray self, int64_t item);
 
 static JsArray cloningFunc(JsArray self);
 
 static bool someFunc(JsArray self, Test test);
 static bool everyFunc(JsArray self, Test test);
-static bool testElement(JsArray self, Test funcptr, Item item);
+static bool testElement(JsArray self, Test funcptr, int64_t item);
 
 static Item gettingFunc(JsArray self, int index);
 static void settingFunc(JsArray self, int index, Item item);
@@ -95,12 +95,12 @@ static ffi_type *sortArgTypes[] = { &ffi_type_pointer };
 static ffi_type *reduceArgTypes[] = { &ffi_type_pointer, &ffi_type_sint };
 static ffi_type *mapArgTypes[] = { &ffi_type_pointer };
 static ffi_type *concatArgTypes[] = { &ffi_type_pointer };
-static ffi_type *appendArgTypes[] = { &ffi_type_pointer };
+static ffi_type *appendArgTypes[] = { &ffi_type_sint64 };
 static ffi_type *printArgTypes[] = { &ffi_type_pointer, &ffi_type_pointer, &ffi_type_pointer };
 static ffi_type *someArgTypes[] = { &ffi_type_pointer };
 static ffi_type *everyArgTypes[] = { &ffi_type_pointer };
-static ffi_type *getArgTypes[] = { &ffi_type_uint };
-static ffi_type *setArgTypes[] = { &ffi_type_uint, &ffi_type_pointer };
+static ffi_type *getArgTypes[] = { &ffi_type_sint };
+static ffi_type *setArgTypes[] = { &ffi_type_sint, &ffi_type_sint64 };
 
 static FuncData funcData[NUM_METHODS] = {
 	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = sortArgTypes,		.handler = sortHandler },
@@ -113,7 +113,7 @@ static FuncData funcData[NUM_METHODS] = {
 	{	.nargs = 0,	.rtype = &ffi_type_pointer,	.atypes = NULL,			.handler = cloneHandler },
 	{	.nargs = 1,	.rtype = &ffi_type_uint8,	.atypes = someArgTypes, 	.handler = someHandler },
 	{	.nargs = 1,	.rtype = &ffi_type_uint8,	.atypes = everyArgTypes, 	.handler = everyHandler },
-	{	.nargs = 1,	.rtype = &ffi_type_pointer,	.atypes = getArgTypes,		.handler = getHandler },
+	{	.nargs = 1,	.rtype = &ffi_type_sint64,	.atypes = getArgTypes,		.handler = getHandler },
 	{	.nargs = 2,	.rtype = &ffi_type_void,	.atypes = setArgTypes,		.handler = setHandler }
 };
 
@@ -206,20 +206,6 @@ static void resize(JsArray self) {
 	}
 }
 
-Item JsArrayItemise(int64_t input, size_t size) {
-	Item ret;
-
-	switch (size) {
-		case sizeof(int64_t): ret.bits64 = input; break;
-		case sizeof(int32_t): ret.bits32 = input; break;
-		case sizeof(int16_t): ret.bits16 = input; break;
-		case sizeof(int8_t): ret.bits8 = input; break;
-		default: ret.bits64 = 0;
-	}
-
-	return ret;
-}
-
 void JsArrayFree(JsArray self) {
 	if (!self) return;
 
@@ -259,7 +245,7 @@ static JsArray sortingFunc(JsArray self, Comp funcptr) {
 			if (sortCompare(self, funcptr, self->get(j), self->get(min))) min = j;
 
 		if (min != i) {
-			Item temp = self->get(min);
+			int64_t temp = self->get(min);
 			self->set(min, self->get(i));
 			self->set(i, temp);
 		}
@@ -268,12 +254,12 @@ static JsArray sortingFunc(JsArray self, Comp funcptr) {
 	return self;
 }
 
-static bool sortCompare(JsArray self, Comp funcptr, Item a, Item b) {
+static bool sortCompare(JsArray self, Comp funcptr, int64_t a, int64_t b) {
 	switch (self->data->elementSize) {
-		case BYTES8: return funcptr.Comp64(a.bits64, b.bits64);
-		case BYTES4: return funcptr.Comp32(a.bits32, b.bits32);
-		case BYTES2: return funcptr.Comp16(a.bits16, b.bits16);
-		case BYTES1: return funcptr.Comp8(a.bits8, b.bits8);
+		case BYTES8: return funcptr.Comp64(a, b);
+		case BYTES4: return funcptr.Comp32(a, b);
+		case BYTES2: return funcptr.Comp16(a, b);
+		case BYTES1: return funcptr.Comp8(a, b);
 		default: xerrorOut("Failed comparison");
 	}
 
@@ -297,12 +283,12 @@ static int reducingFunc(JsArray self, Reduce funcptr, int start) {
 	return accumulator;
 }
 
-static int reduceElement(JsArray self, Reduce funcptr, int accum, Item item) {
+static int reduceElement(JsArray self, Reduce funcptr, int accum, int64_t item) {
 	switch (self->data->elementSize) {
-		case BYTES8: return funcptr.Reduce64(accum, item.bits64);
-		case BYTES4: return funcptr.Reduce32(accum, item.bits32);
-		case BYTES2: return funcptr.Reduce16(accum, item.bits16);
-		case BYTES1: return funcptr.Reduce8(accum, item.bits8);
+		case BYTES8: return funcptr.Reduce64(accum, item);
+		case BYTES4: return funcptr.Reduce32(accum, item);
+		case BYTES2: return funcptr.Reduce16(accum, item);
+		case BYTES1: return funcptr.Reduce8(accum, item);
 		default: xerrorOut("Failed reduction");
 	}
 
@@ -324,18 +310,16 @@ static JsArray mappingFunc(JsArray self, Map funcptr) {
 	return self;
 }
 
-static Item mapElement(JsArray self, Map funcptr, Item item) {
-	Item ret;
-
+static int64_t mapElement(JsArray self, Map funcptr, int64_t item) {
 	switch (self->data->elementSize) {
-		case BYTES8: ret.bits64 = funcptr.Map64(item.bits64); break;
-		case BYTES4: ret.bits32 = funcptr.Map32(item.bits32); break;
-		case BYTES2: ret.bits16 = funcptr.Map16(item.bits16); break;
-		case BYTES1: ret.bits8 = funcptr.Map8(item.bits8); break;
+		case BYTES8: return funcptr.Map64(item); break;
+		case BYTES4: return funcptr.Map32(item); break;
+		case BYTES2: return funcptr.Map16(item); break;
+		case BYTES1: return funcptr.Map8(item); break;
 		default: xerrorOut("Failed map");
 	}
 
-	return ret;
+	return 0;
 }
 
 static void concatHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
@@ -358,12 +342,12 @@ static JsArray concattingFunc(JsArray self, JsArray other) {
 
 static void appendHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
-	Item item = *(Item *) args[0];
+	int64_t item = *(int64_t *) args[0];
 
 	*(ffi_sarg*) ret = appendingFunc(self, item);
 }
 
-static int appendingFunc(JsArray self, Item item) {
+static int appendingFunc(JsArray self, int64_t item) {
 	if (self->data->len >= self->data->cap) {
 		resizeTo(self, self->data->cap * 2);
 	}
@@ -393,12 +377,12 @@ static void printingFunc(JsArray self, char *preamble, char *separator, char *en
 	printf("%s", end);
 }
 
-static void printElement(JsArray self, Item item) {
+static void printElement(JsArray self, int64_t item) {
 	switch (self->data->elementSize) {
-		case BYTES8: printf("%" PRId64, item.bits64); break;
-		case BYTES4: printf("%" PRId32, item.bits32); break;
-		case BYTES2: printf("%" PRId16, item.bits16); break;
-		case BYTES1: printf("%" PRId8, item.bits8); break;
+		case BYTES8: printf("%" PRId64, item); break;
+		case BYTES4: printf("%" PRId32, (int32_t) item); break;
+		case BYTES2: printf("%" PRId16, (int16_t) item); break;
+		case BYTES1: printf("%" PRId8, (int8_t) item); break;
 		default: xerrorOut("Failed print");
 	}
 }
@@ -452,12 +436,12 @@ static bool everyFunc(JsArray self, Test test) {
 	return true;
 }
 
-static bool testElement(JsArray self, Test funcptr, Item item) {
+static bool testElement(JsArray self, Test funcptr, int64_t item) {
 	switch (self->data->elementSize) {
-		case BYTES8: return funcptr.Test64(item.bits64);
-		case BYTES4: return funcptr.Test32(item.bits32);
-		case BYTES2: return funcptr.Test16(item.bits16);
-		case BYTES1: return funcptr.Test8(item.bits8);
+		case BYTES8: return funcptr.Test64(item);
+		case BYTES4: return funcptr.Test32(item);
+		case BYTES2: return funcptr.Test16(item);
+		case BYTES1: return funcptr.Test8(item);
 		default: xerrorOut("Failed test");
 	}
 

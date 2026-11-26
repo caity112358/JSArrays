@@ -8,13 +8,6 @@
 
 typedef struct jsArrayWrapper *JsArray;
 
-typedef union {
-	int64_t bits64;
-	int32_t bits32;
-	int16_t bits16;
-	int8_t bits8;
-} Item;
-
 // Returns true if a comes before b
 // Comp(a, b) -> bool.
 typedef union {
@@ -57,14 +50,14 @@ typedef JsArray (*SortFunc)(Comp funcptr);
 typedef int (*ReduceFunc)(Reduce funcptr, int start);
 typedef JsArray (*MapFunc)(Map funcptr);
 typedef JsArray (*ConcatFunc)(JsArray other);
-typedef int (*AppendFunc)(Item item);
+typedef int (*AppendFunc)(int64_t item);
 typedef void (*PrintFunc)(char *preamble, char *separator, char *end);
 typedef int (*LengthFunc)(void);
 typedef JsArray (*CloneFunc)(void);
 typedef bool (*SomeFunc)(Test test);
 typedef bool (*EveryFunc)(Test test);
-typedef Item (*GetFunc)(int index);
-typedef void (*SetFunc)(int index, Item item);
+typedef int64_t (*GetFunc)(int index);
+typedef void (*SetFunc)(int index, int64_t item);
 
 typedef struct jsArrayData *JsArrayData;
 
@@ -107,7 +100,6 @@ struct jsArrayWrapper {
 };
 
 JsArray JsArrayNew(size_t size);
-Item JsArrayItemise(int64_t input, size_t size);
 void JsArrayFree(JsArray jsArray);
 
 #endif
