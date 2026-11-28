@@ -29,6 +29,7 @@ validSizeTest(newArray, methodChecks) {
 	checkMethod(every);
 	checkMethod(get);
 	checkMethod(set);
+	checkMethod(shuffle);
 
 	JsArrayFree(arr);
 }
