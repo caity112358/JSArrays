@@ -1,4 +1,4 @@
-#include "main.h"
+#include "jsArrayTests.h"
 #include "jsArrays.h"
 
 validSizeTest(newArray, nullChecks) {
