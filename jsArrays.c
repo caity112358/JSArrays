@@ -448,8 +448,8 @@ static void shuffleHandler(ffi_cif* cif, void* ret, void** args, void* user_data
 static void shufflingFunc(JsArray self) {
 	int len = self->data->len;
 
-	for (int i = 0; i < len; i++) {
-		int index = rand() % i + 1;
+	for (int i = len - 1; i > 0; i--) {
+		int index = rand() % (i + 1);
 
 		int64_t curr = self->get(i);
 		int64_t other = self->get(index);

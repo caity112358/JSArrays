@@ -228,7 +228,7 @@ validSizeTest(length, shuffleDoesntChangeLength) {
 		arr->append(i);
 
 	int len = arr->length();
-	//arr->shuffle();
+	arr->shuffle();
 	cr_expect(arr->length() == len, "Shuffle method changed array length");
 	
 	JsArrayFree(arr);
