@@ -1,5 +1,6 @@
 #include "jsArrayTests.h"
 #include "jsArrays.h"
+#include <criterion/internal/assert.h>
 
 validSizeTest(newArray, nullChecks) {
 	JsArray arr = JsArrayNew(*size);
@@ -234,11 +235,41 @@ validSizeTest(length, shuffleDoesntChangeLength) {
 	JsArrayFree(arr);
 }
 
-/*
-Length of a clone, and of the result of a concat
-*/
+validSizeTest(length, clonePreservesLength) {
+	JsArray arr = JsArrayNew(*size);
+	cr_assert(arr);
 
+	for (int i = 0; i < 128; i++)
+		arr->append((rand() % 255) - 128);
 
+	JsArray clone = arr->clone();
+	cr_expect(clone->length() == arr->length(), "Clone method changed length");
+
+	JsArrayFree(clone);
+	JsArrayFree(arr);
+}
+
+validSizeTest(length, concatAddsLength) {
+	JsArray arr1 = JsArrayNew(*size);
+	cr_assert(arr1);
+	for (int i = 0; i < 128; i++)
+		arr1->append((rand() % 255) - 128);
+
+	JsArray arr2 = JsArrayNew(*size);
+	cr_assert(arr2);
+	for (int i = 0; i < 128; i++)
+		arr2->append((rand() % 255) - 128);
+
+	int len1 = arr1->length();
+	int len2 = arr2->length();
+
+	arr1->concat(arr2);
+	
+	cr_expect(arr1->length() == len1 + len2, "Concat method didn't add length");
+
+	JsArrayFree(arr2);
+	JsArrayFree(arr1);
+}
 
 /*
 get / set
