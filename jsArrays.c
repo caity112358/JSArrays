@@ -48,7 +48,7 @@ static void getHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 static void setHandler(ffi_cif* cif, void* ret, void** args, void* user_data);
 
 static JsArray sortingFunc(JsArray self, Comp comp);
-static int reducingFunc(JsArray self, Reduce reduce, int start);
+static int reducingFunc(JsArray self, Reduce reduce, int64_t start);
 static JsArray mappingFunc(JsArray self, Map map);
 static JsArray concattingFunc(JsArray self, JsArray other);
 
@@ -85,7 +85,7 @@ typedef struct {
 } FuncData;
 
 static ffi_type *sortArgTypes[] = { &ffi_type_pointer };
-static ffi_type *reduceArgTypes[] = { &ffi_type_pointer, &ffi_type_sint };
+static ffi_type *reduceArgTypes[] = { &ffi_type_pointer, &ffi_type_sint64 };
 static ffi_type *mapArgTypes[] = { &ffi_type_pointer };
 static ffi_type *concatArgTypes[] = { &ffi_type_pointer };
 static ffi_type *appendArgTypes[] = { &ffi_type_sint64 };
@@ -250,13 +250,13 @@ static JsArray sortingFunc(JsArray self, Comp comp) {
 static void reduceHandler(ffi_cif* cif, void* ret, void** args, void* user_data) {
 	JsArray self = user_data;
 	Reduce reduce = *(Reduce*) args[0];
-	int start = *(int *) args[1];
+	int64_t start = *(int64_t *) args[1];
 
 	*(ffi_sarg*) ret = reducingFunc(self, reduce, start);
 }
 
-static int reducingFunc(JsArray self, Reduce reduce, int start) {
-	int accumulator = start;
+static int reducingFunc(JsArray self, Reduce reduce, int64_t start) {
+	int64_t accumulator = start;
 
 	for (int i = 0; i < self->data->len; i++)
 		accumulator = reduce(accumulator, self->get(i));
