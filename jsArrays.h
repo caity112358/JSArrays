@@ -27,7 +27,7 @@ typedef int64_t (*Map)(int64_t item);
 typedef bool (*Test)(int64_t item);
 
 typedef JsArray (*SortFunc)(Comp funcptr);
-typedef int (*ReduceFunc)(Reduce funcptr, int start);
+typedef int64_t (*ReduceFunc)(Reduce funcptr, int64_t start);
 typedef JsArray (*MapFunc)(Map funcptr);
 typedef JsArray (*ConcatFunc)(JsArray other);
 typedef int (*AppendFunc)(int64_t item);
